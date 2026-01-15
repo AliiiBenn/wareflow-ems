@@ -1,0 +1,1 @@
+"""Excel generation with formatting."""
