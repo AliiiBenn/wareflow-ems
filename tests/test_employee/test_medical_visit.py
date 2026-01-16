@@ -28,11 +28,11 @@ class TestMedicalVisitExpiration:
 
         assert visit.expiration_date == date(2025, 3, 1)
 
-    def test_medical_visit_auto_calculates_expiration_recovery(self, unfit_visit):
-        """Test that recovery visit gets 1-year expiration."""
+    def test_medical_visit_auto_calculates_expiration_periodic(self, unfit_visit):
+        """Test that periodic visit gets 2-year expiration."""
         # Visit date: 2023-01-01
-        # Expiration: 2024-01-01 (1 year)
-        assert unfit_visit.expiration_date == date(2024, 1, 1)
+        # Expiration: 2025-01-01 (2 years for periodic)
+        assert unfit_visit.expiration_date == date(2025, 1, 1)
 
 
 class TestMedicalVisitProperties:
