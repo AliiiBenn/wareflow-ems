@@ -131,12 +131,21 @@ def main(page: ft.Page):
     page.title = "Employee Manager"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.padding = 0
 
-    # Add content directly to page (like the test)
+    # Import and build dashboard
+    from ui.views.dashboard import DashboardView
+
+    dashboard = DashboardView(page)
+    dashboard_content = dashboard.build()
+
+    # Add dashboard to page
     page.add(
-        ft.AppBar(title=ft.Text("Employee Manager")),
-        ft.Text("Dashboard", size=32, weight=ft.FontWeight.BOLD),
-        ft.Text("Coming soon...", size=16),
+        ft.AppBar(
+            title=ft.Text("Employee Manager"),
+            bgcolor=ft.Colors.SURFACE,
+        ),
+        dashboard_content,
     )
 
 
