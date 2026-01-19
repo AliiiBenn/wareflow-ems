@@ -171,12 +171,27 @@ class DashboardView:
 
     def _build_actions(self) -> ft.Row:
         """Build quick action buttons."""
+        def navigate_to_employees(e):
+            """Navigate to employees list."""
+            self.page.clean()
+            from ui.views.employees import EmployeesListView
+            employees_view = EmployeesListView(self.page)
+            self.page.add(
+                ft.AppBar(title=ft.Text("Employee Manager")),
+                employees_view.build(),
+            )
+            self.page.update()
+
         return ft.Row(
             [
                 ft.ElevatedButton(
                     "➕ Add Employee",
                     bgcolor=ft.Colors.BLUE,
                     color=ft.Colors.WHITE,
+                ),
+                ft.ElevatedButton(
+                    "👥 View All Employees",
+                    on_click=navigate_to_employees,
                 ),
                 ft.ElevatedButton(
                     "⚠️ View All Alerts",
