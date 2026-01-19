@@ -40,7 +40,7 @@ class DashboardView:
         alerts = self.controller.format_alerts_for_ui(days=30, limit=10)
 
         # Build components
-        stats_row = self._build_stats_cards(stats, compliance)
+        stats_row = self._build_stats_cards(stats, compliance, total_alerts)
         alerts_section = self._build_alerts_section(alerts, total_alerts)
         actions_row = self._build_actions()
 
@@ -57,32 +57,32 @@ class DashboardView:
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         )
 
-    def _build_stats_cards(self, stats: dict, compliance: int) -> ft.Row:
+    def _build_stats_cards(self, stats: dict, compliance: int, total_alerts: int) -> ft.Row:
         """Build the statistics cards row."""
         return ft.Row(
             [
                 StatCard(
                     "Total Employees",
                     stats['total_employees'],
-                    ft.icons.PEOPLE,
+                    "👥",
                     ft.Colors.BLUE
                 ),
                 StatCard(
                     "Active",
                     stats['active_employees'],
-                    ft.icons.CHECK_CIRCLE,
+                    "✅",
                     ft.Colors.GREEN
                 ),
                 StatCard(
                     "Alerts",
                     total_alerts,
-                    ft.icons.WARNING,
+                    "⚠️",
                     ft.Colors.ORANGE
                 ),
                 StatCard(
                     "Compliance",
                     f"{compliance}%",
-                    ft.icons.TRENDING_UP,
+                    "📊",
                     ft.Colors.GREEN if compliance >= 90 else ft.Colors.ORANGE
                 ),
             ],
