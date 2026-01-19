@@ -15,8 +15,10 @@ class AppShell(ft.Column):
     """
     Main application layout shell.
 
-    Provides persistent AppBar and navigation with dynamic content area.
+    Provides persistent AppBar with integrated navigation and dynamic content area.
     Eliminates the need for page.clean() by using a container that updates.
+
+    Layout: [Title] [Navigation Center] [Actions]
 
     Args:
         page: The Flet page instance
@@ -36,20 +38,30 @@ class AppShell(ft.Column):
             expand=True,
         )
 
-        # Navigation bar
-        self.nav_bar = self._build_navigation()
-
-        # App bar
+        # App bar with navigation integrated
         self.app_bar = ft.AppBar(
-            title=ft.Text(
-                "Employee Manager",
-                size=20,
-                weight=ft.FontWeight.W_600,
-            ),
             bgcolor=self._colors["surface"],
             elevation=1,
-            actions=self._build_app_bar_actions(),
+            toolbar_height=64,
         )
+
+        # Build app bar content
+        self.app_bar.title = ft.Row(
+            [
+                # Title on the left
+                ft.Text(
+                    "Employee Manager",
+                    size=20,
+                    weight=ft.FontWeight.W_600,
+                    color=self._colors["on_surface"],
+                ),
+            ],
+            expand=False,
+        )
+
+        # Center navigation
+        self.app_bar.center_title = False
+        self.app_bar.actions = self._build_app_bar_content()
 
         # Initialize router with content container
         router = get_router(page)
@@ -61,17 +73,8 @@ class AppShell(ft.Column):
             [
                 self.app_bar,
                 ft.Container(
-                    content=ft.Column(
-                        [
-                            self.nav_bar,
-                            ft.Container(
-                                content=self.content_container,
-                                width=MAX_CONTENT_WIDTH,
-                                expand=True,
-                            ),
-                        ],
-                    ),
-                    alignment=ft.alignment.Alignment(0, 0),
+                    content=self.content_container,
+                    width=MAX_CONTENT_WIDTH,
                     expand=True,
                 ),
             ],
@@ -79,26 +82,29 @@ class AppShell(ft.Column):
             expand=True,
         )
 
-    def _build_navigation(self) -> ft.Container:
-        """Build the navigation bar."""
-        from ui.components.buttons import AppButton
+    def _build_app_bar_content(self) -> list:
+        """Build the complete app bar content with center navigation and right actions."""
         from ui.components.icons import Icons, IconSize
 
-        return ft.Container(
-            content=ft.Row(
+        return [
+            # Spacer to push center content
+            ft.Container(expand=True),
+
+            # Center navigation
+            ft.Row(
                 [
                     self._nav_button(
                         "Dashboard",
                         Icons.HOME,
                         "/",
                     ),
-                    ft.Container(width=Spacing.SM.value),
+                    ft.Container(width=Spacing.XS.value),
                     self._nav_button(
                         "Employees",
                         Icons.PEOPLE,
                         "/employees",
                     ),
-                    ft.Container(width=Spacing.SM.value),
+                    ft.Container(width=Spacing.XS.value),
                     self._nav_button(
                         "Alerts",
                         Icons.WARNING,
@@ -107,12 +113,22 @@ class AppShell(ft.Column):
                 ],
                 alignment=ft.MainAxisAlignment.CENTER,
             ),
-            padding=ft.padding.symmetric(
-                horizontal=Spacing.MD.value,
-                vertical=Spacing.SM.value
+
+            # Spacer for balance
+            ft.Container(expand=True),
+
+            # Right side actions
+            ft.IconButton(
+                icon=Icons.SETTINGS,
+                tooltip="Settings",
+                on_click=lambda e: self._navigate("/settings"),
             ),
-            bgcolor=self._colors["surface_variant"],
-        )
+            ft.IconButton(
+                icon=ft.icons.Icons.LIGHT_MODE,
+                tooltip="Toggle theme",
+                on_click=self._toggle_theme,
+            ),
+        ]
 
     def _nav_button(
         self,
@@ -121,33 +137,23 @@ class AppShell(ft.Column):
         route: str
     ) -> ft.Container:
         """Build a navigation button."""
-        from ui.components.icons import AppIcon, IconSize
-
         is_active = (self._current_route == route)
 
         # Style based on active state
         if is_active:
             bgcolor = get_primary_color()
             text_color = ft.Colors.WHITE
-            icon_color = ft.Colors.WHITE
         else:
             bgcolor = ft.Colors.TRANSPARENT
             text_color = self._colors["on_surface_variant"]
-            icon_color = self._colors["on_surface_variant"]
 
         button = ft.Container(
             content=ft.Row(
                 [
-                    ft.Icon(
-                        icon,
-                        size=IconSize.SM.value,
-                        color=icon_color,
-                    ),
-                    ft.Container(width=Spacing.XS.value),
                     ft.Text(
                         label,
                         size=14,
-                        weight=ft.FontWeight.W_500 if is_active else ft.FontWeight.W_400,
+                        weight=ft.FontWeight.W_600 if is_active else ft.FontWeight.W_500,
                         color=text_color,
                     ),
                 ],
@@ -155,8 +161,8 @@ class AppShell(ft.Column):
             ),
             bgcolor=bgcolor,
             padding=ft.padding.symmetric(
-                horizontal=Spacing.MD.value,
-                vertical=Spacing.SM.value
+                horizontal=Spacing.SM.value,
+                vertical=Spacing.XS.value
             ),
             border_radius=8,
             on_click=lambda e: self._navigate(route),
@@ -173,25 +179,8 @@ class AppShell(ft.Column):
 
         # Update navigation visuals
         self._current_route = route
-        self.nav_bar.content = self._build_navigation().content
-        self.nav_bar.update()
-
-    def _build_app_bar_actions(self) -> list:
-        """Build app bar action buttons."""
-        from ui.components.icons import Icons
-
-        return [
-            ft.IconButton(
-                icon=Icons.SETTINGS,
-                tooltip="Settings",
-                on_click=lambda e: self._navigate("/settings"),
-            ),
-            ft.IconButton(
-                icon=ft.icons.Icons.LIGHT_MODE,
-                tooltip="Toggle theme",
-                on_click=self._toggle_theme,
-            ),
-        ]
+        self.app_bar.actions = self._build_app_bar_content()
+        self.app_bar.update()
 
     def _toggle_theme(self, e):
         """Toggle between light and dark theme."""
