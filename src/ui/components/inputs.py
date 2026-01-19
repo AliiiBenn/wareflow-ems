@@ -109,12 +109,15 @@ class AppDropdown(ft.Dropdown):
             label=formatted_label,
             options=dropdown_options,
             value=value,
-            on_change=on_change,
             hint_text=hint_text,
             border_radius=BorderRadius.MD.value,
             filled=True,
             **kwargs
         )
+
+        # Set on_change handler separately (can't pass to constructor)
+        if on_change:
+            self.on_change = on_change
 
 
 class SearchField(ft.Container):

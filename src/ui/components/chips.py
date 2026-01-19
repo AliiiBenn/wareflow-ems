@@ -122,7 +122,7 @@ class AppBadge(ft.Container):
             height=height,
             padding=ft.padding.all(padding),
             border_radius=BorderRadius.FULL.value,
-            alignment=ft.alignment.center,
+            alignment=ft.alignment.Alignment(0, 0),
             **kwargs
         )
 

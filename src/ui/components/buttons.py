@@ -54,8 +54,7 @@ class AppButton(ft.ElevatedButton):
             style.side = ft.BorderSide(1, ft.Colors.BLUE)
 
         super().__init__(
-            text=text if not icon else None,
-            content=content,
+            content=content or ft.Text(text),
             style=style,
             on_click=on_click,
             disabled=disabled,

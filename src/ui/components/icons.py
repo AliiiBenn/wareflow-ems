@@ -28,7 +28,7 @@ class AppIcon(ft.Icon):
         **kwargs
     ):
         super().__init__(
-            name=icon_name,
+            icon=icon_name,
             size=size,
             color=color or AppTheme.PRIMARY,
             **kwargs
