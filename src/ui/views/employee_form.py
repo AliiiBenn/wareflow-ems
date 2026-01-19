@@ -77,8 +77,8 @@ class EmployeeFormView:
         """Build form header with back button."""
         return ft.Row(
             [
-                ft.IconButton(
-                    ft.icons.CHEVRON_LEFT,
+                ft.TextButton(
+                    "← Back",
                     on_click=lambda e: self._navigate_back(),
                 ),
                 ft.Text(
