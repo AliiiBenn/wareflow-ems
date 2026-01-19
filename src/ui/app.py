@@ -57,8 +57,8 @@ def main(page: ft.Page):
     page.title = "Employee Manager"
     page.window_width = 1400
     page.window_height = 900
-    page.theme_mode = app_state.get_flet_theme_mode()
-    page.theme = AppTheme.get_light_theme()
+    page.theme_mode = ft.ThemeMode.DARK
+    page.theme = AppTheme.get_dark_theme()
     page.dark_theme = AppTheme.get_dark_theme()
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.padding = 0
