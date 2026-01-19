@@ -265,7 +265,7 @@ class EmployeeDetailView:
         items = []
         for visit in visits:
             days = visit.days_until_expiration
-            if visit.visit_result == 'unfit':
+            if visit.result == 'unfit':
                 status_text = "⛔ Unfit"
                 status_color = ft.Colors.RED
             elif days < 0:
@@ -281,7 +281,7 @@ class EmployeeDetailView:
             items.append(
                 ft.ListTile(
                     leading=ft.Text("🏥", size=24),
-                    title=ft.Text(f"{visit.visit_kind.capitalize()} Visit"),
+                    title=ft.Text(f"{visit.visit_type.capitalize()} Visit"),
                     subtitle=ft.Text(status_text, color=status_color),
                     trailing=ft.Text(
                         visit.visit_date.strftime("%d/%m/%Y"),

@@ -57,12 +57,29 @@ class EmployeeController:
         # Get certifications with prefetch
         caces = list(emp.caces.order_by(-Caces.expiration_date))
         visits = list(emp.medical_visits.order_by(-MedicalVisit.visit_date))
-        trainings = list(emp.online_trainings.order_by(-OnlineTraining.completed_date))
+        trainings = list(emp.trainings.order_by(-OnlineTraining.completion_date))
+
+        # Calculate simple breakdown based on valid/expired counts
+        # This is a simplified version for UI display
+        caces_valid = sum(1 for c in caces if not c.is_expired)
+        caces_score = min(caces_valid * 30, 30) if caces else 0
+
+        medical_valid = sum(1 for v in visits if not v.is_expired and v.result == 'fit')
+        medical_score = min(medical_valid * 30, 30) if visits else 0
+
+        training_valid = sum(1 for t in trainings if not t.is_expired)
+        training_score = min(training_valid * 40, 40) if trainings else 0
+
+        breakdown = {
+            'caces': caces_score,
+            'medical': medical_score,
+            'training': training_score,
+        }
 
         return {
             'employee': emp,
             'compliance_score': score_data['score'],
-            'score_breakdown': score_data['breakdown'],
+            'score_breakdown': breakdown,
             'caces_list': caces,
             'medical_visits': visits,
             'trainings': trainings,
