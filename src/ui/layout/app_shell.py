@@ -67,7 +67,7 @@ class AppShell(ft.Column):
                             ),
                         ],
                     ),
-                    alignment=ft.alignment.center,
+                    alignment=ft.alignment.Alignment(0, 0),
                     expand=True,
                 ),
             ],
