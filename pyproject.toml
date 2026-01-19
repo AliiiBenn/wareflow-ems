@@ -7,7 +7,7 @@ requires-python = ">=3.14"
 dependencies = [
     "peewee>=3.17.0",
     "python-dateutil>=2.8.0",
-    "flet>=0.21.0",
+    "flet[all]>=0.80.2",
     "openpyxl>=3.1.0",
     "typer[all]>=0.12.0",
     "rich>=13.7.0",
@@ -21,8 +21,8 @@ dev = [
     "pytest-cov>=4.1.0",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "freezegun>=1.5.0",
