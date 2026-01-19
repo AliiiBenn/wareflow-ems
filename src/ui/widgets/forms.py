@@ -95,6 +95,7 @@ class DropdownField(ft.Row):
         **kwargs
     ):
         self.on_change = on_change
+        self._value = value
 
         # Build dropdown options
         dropdown_options = []
@@ -103,10 +104,10 @@ class DropdownField(ft.Row):
                 ft.dropdown.Option(opt_value, opt_label)
             )
 
+        # Create dropdown without on_change in constructor
         self.dropdown = ft.Dropdown(
             options=dropdown_options,
             value=value,
-            on_change=self._on_dropdown_change,
             width=300,
         )
 
@@ -117,6 +118,9 @@ class DropdownField(ft.Row):
             width=150,
         )
 
+        # Store reference for manual event handling
+        self._dropdown_options = dropdown_options
+
         super().__init__(
             [
                 self.label_text,
@@ -124,11 +128,6 @@ class DropdownField(ft.Row):
             ],
             **kwargs
         )
-
-    def _on_dropdown_change(self, e):
-        """Handle dropdown change."""
-        if self.on_change:
-            self.on_change(e.control.value)
 
     @property
     def value(self) -> Optional[str]:
@@ -161,12 +160,12 @@ class TextFormField(ft.Row):
     ):
         self.on_change = on_change
 
+        # Create TextField without on_change
         self.text_field = ft.TextField(
             value=value,
             hint_text=hint_text,
             max_length=max_length,
             width=300,
-            on_change=self._on_text_change,
         )
 
         self.label_text = ft.Text(
@@ -183,11 +182,6 @@ class TextFormField(ft.Row):
             ],
             **kwargs
         )
-
-    def _on_text_change(self, e):
-        """Handle text change."""
-        if self.on_change:
-            self.on_change(e.control.value)
 
     @property
     def value(self) -> str:
