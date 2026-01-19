@@ -43,6 +43,7 @@ class EmployeeDetailView:
 
         # Build components
         header = self._build_header(emp)
+        actions_section = self._build_actions_section(self.employee_id)
         info_section = self._build_info_section(emp)
         compliance_section = self._build_compliance_section(data)
         caces_section = self._build_caces_section(data['caces_list'])
@@ -53,6 +54,8 @@ class EmployeeDetailView:
         return ft.Column(
             [
                 header,
+                ft.Container(height=10),
+                actions_section,
                 ft.Container(height=20),
                 info_section,
                 ft.Container(height=20),
@@ -112,6 +115,31 @@ class EmployeeDetailView:
                 ),
             ],
             alignment=ft.MainAxisAlignment.START,
+        )
+
+    def _build_actions_section(self, employee_id: str) -> ft.Row:
+        """Build action buttons for employee."""
+        def navigate_to_edit(e):
+            """Navigate to edit form."""
+            self.page.clean()
+            from ui.views.employee_form import EmployeeFormView
+            form_view = EmployeeFormView(self.page, employee_id=employee_id)
+            self.page.add(
+                ft.AppBar(title=ft.Text("Employee Manager")),
+                form_view.build(),
+            )
+            self.page.update()
+
+        return ft.Row(
+            [
+                ft.ElevatedButton(
+                    "✏️ Edit",
+                    bgcolor=ft.Colors.BLUE,
+                    color=ft.Colors.WHITE,
+                    on_click=navigate_to_edit,
+                ),
+            ],
+            spacing=10,
         )
 
     def _build_info_section(self, emp) -> ft.Container:

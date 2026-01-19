@@ -193,12 +193,24 @@ class DashboardView:
             )
             self.page.update()
 
+        def navigate_to_add_employee(e):
+            """Navigate to add employee form."""
+            self.page.clean()
+            from ui.views.employee_form import EmployeeFormView
+            form_view = EmployeeFormView(self.page, employee_id=None)
+            self.page.add(
+                ft.AppBar(title=ft.Text("Employee Manager")),
+                form_view.build(),
+            )
+            self.page.update()
+
         return ft.Row(
             [
                 ft.ElevatedButton(
                     "➕ Add Employee",
                     bgcolor=ft.Colors.BLUE,
                     color=ft.Colors.WHITE,
+                    on_click=navigate_to_add_employee,
                 ),
                 ft.ElevatedButton(
                     "👥 View All Employees",
