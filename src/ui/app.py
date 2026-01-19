@@ -133,6 +133,15 @@ def main(page: ft.Page):
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
     page.padding = 0
 
+    # Add cleanup handler to release lock when app closes
+    def on_close(e):
+        """Release lock when application closes."""
+        print("Releasing application lock...")
+        app_state.release_lock()
+        print("Lock released.")
+
+    page.on_close = on_close
+
     # Import and build dashboard
     from ui.views.dashboard import DashboardView
 
@@ -150,4 +159,15 @@ def main(page: ft.Page):
 
 
 if __name__ == "__main__":
-    ft.run(main)
+    try:
+        ft.run(main)
+    finally:
+        # Ensure lock is released even if app crashes
+        try:
+            app_state = get_app_state()
+            if app_state.lock_manager.is_locked:
+                print("Cleanup: Releasing application lock...")
+                app_state.release_lock()
+                print("Cleanup: Lock released.")
+        except Exception as e:
+            print(f"Cleanup error: {e}")
