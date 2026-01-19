@@ -16,7 +16,7 @@ class NavigationBar(ft.Container):
     """
 
     def __init__(self, page: ft.Page, current_view: str = "dashboard"):
-        self.page = page
+        self._page = page
         self.current_view = current_view
 
         # Build navigation buttons
@@ -65,36 +65,36 @@ class NavigationBar(ft.Container):
 
     def _navigate_to_dashboard(self):
         """Navigate to dashboard view."""
-        self.page.clean()
+        self._page.clean()
         from ui.views.dashboard import DashboardView
-        dashboard = DashboardView(self.page)
-        self.page.add(
+        dashboard = DashboardView(self._page)
+        self._page.add(
             self._build_app_bar(),
             dashboard.build(),
         )
-        self.page.update()
+        self._page.update()
 
     def _navigate_to_employees(self):
         """Navigate to employees list view."""
-        self.page.clean()
+        self._page.clean()
         from ui.views.employees import EmployeesListView
-        employees_view = EmployeesListView(self.page)
-        self.page.add(
+        employees_view = EmployeesListView(self._page)
+        self._page.add(
             self._build_app_bar(),
             employees_view.build(),
         )
-        self.page.update()
+        self._page.update()
 
     def _navigate_to_alerts(self):
         """Navigate to alerts view."""
-        self.page.clean()
+        self._page.clean()
         from ui.views.alerts import AlertsView
-        alerts_view = AlertsView(self.page)
-        self.page.add(
+        alerts_view = AlertsView(self._page)
+        self._page.add(
             self._build_app_bar(),
             alerts_view.build(),
         )
-        self.page.update()
+        self._page.update()
 
     def _build_app_bar(self) -> ft.AppBar:
         """Build app bar with title."""
