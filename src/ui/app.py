@@ -1,13 +1,38 @@
 """Flet application entry point."""
 
+import sys
+import os
+from pathlib import Path
+
+# Force web server mode to avoid flet-desktop dependency issues
+os.environ["FLET_FORCE_WEB_SERVER"] = "1"
+
+# Add src directory to path for imports
+src_path = Path(__file__).parent.parent
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
+
 import flet as ft
-from state.app_state import get_app_state, reset_app_state
-from state.navigation import NavigationHandler, Route, create_basic_view
+from .state.app_state import get_app_state, reset_app_state
+from .state.navigation import NavigationHandler, Route, create_basic_view
 
 
-def main():
+def ensure_database():
+    """Ensure database is initialized before starting the app."""
+    db_path = Path("employee_manager.db")
+
+    # If database doesn't exist, initialize it
+    if not db_path.exists():
+        from database.connection import init_database
+        init_database(db_path)
+        print(f"Database initialized: {db_path}")
+
+
+def run_app():
     """Main entry point for the Flet application."""
-    ft.app(target=entry_point, assets_dir="assets")
+    # Ensure database exists before starting
+    ensure_database()
+    ft.run(entry_point, view=ft.AppView.WEB_BROWSER, port=8080)
 
 
 def entry_point(page: ft.Page):
@@ -256,4 +281,4 @@ def register_placeholder_views(nav_handler: NavigationHandler):
 
 
 if __name__ == "__main__":
-    main()
+    run_app()

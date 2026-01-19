@@ -2,9 +2,16 @@
 
 import socket
 import os
+import sys
+from pathlib import Path
 from typing import Optional
 
 import flet as ft
+
+# Add src directory to path for imports
+src_path = Path(__file__).parent.parent.parent
+if str(src_path) not in sys.path:
+    sys.path.insert(0, str(src_path))
 
 from lock.manager import LockManager, get_process_info
 
