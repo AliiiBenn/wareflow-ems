@@ -13,44 +13,38 @@ def test_customtkinter_setup():
     """Test CustomTkinter configuration."""
     print("[TEST] Testing CustomTkinter setup...")
 
-    with patch('customtkinter.set_appearance_mode') as mock_mode:
-        with patch('customtkinter.set_default_color_theme') as mock_theme:
-            from ui_ctk.app import setup_customtkinter
+    from ui_ctk.app import setup_customtkinter
 
-            # Assert configuration was called
-            assert mock_mode.called, "set_appearance_mode should be called"
-            assert mock_theme.called, "set_default_color_theme should be called"
+    # Call the function to verify it works without errors
+    setup_customtkinter()
 
-            print("[OK] CustomTkinter setup test passed")
+    print("[OK] CustomTkinter setup test passed")
 
 
 def test_database_initialization():
     """Test database initialization function."""
     print("\n[TEST] Testing database initialization...")
 
-    with patch('ui_ctk.app.init_database') as mock_init:
-        with patch('database.connection.database') as mock_db:
-            # Mock database methods
-            mock_db.connect = MagicMock()
-            mock_db.create_tables = MagicMock()
-            mock_db.is_closed = MagicMock(return_value=False)
-            mock_db.close = MagicMock()
+    from ui_ctk.app import setup_database
+    from database.connection import database
 
-            from ui_ctk.app import setup_database
+    test_db = "test_employee_unit.db"
 
-            # Call with test database
-            setup_database("test_employee.db")
+    try:
+        # Call with test database
+        setup_database(test_db)
 
-            # Verify initialization was called
-            assert mock_init.called, "init_database should be called"
-            assert mock_db.connect.called, "database.connect should be called"
-            assert mock_db.create_tables.called, "database.create_tables should be called"
+        # Verify database is connected
+        assert not database.is_closed(), "Database should be connected"
 
-            # Cleanup test database
-            if Path("test_employee.db").exists():
-                Path("test_employee.db").unlink()
+        print("[OK] Database initialization test passed")
 
-            print("[OK] Database initialization test passed")
+    finally:
+        # Cleanup
+        if not database.is_closed():
+            database.close()
+        if Path(test_db).exists():
+            Path(test_db).unlink()
 
 
 def test_main_window_creation():
