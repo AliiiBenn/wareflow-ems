@@ -180,7 +180,73 @@ VALIDATION_EMAIL_INVALID = "Format d'email invalide"
 VALIDATION_PHONE_INVALID = "Format de téléphone invalide"
 VALIDATION_DATE_REQUIRED = "La date est requise"
 VALIDATION_DATE_INVALID = "Format de date invalide (attendu: JJ/MM/AAAA)"
+VALIDATION_DATE_FUTURE = "La date ne peut pas être dans le futur"
+VALIDATION_DATE_TOO_OLD = "La date semble incorrecte (avant 2000)"
 VALIDATION_STATUS_REQUIRED = "Le statut est requis"
 VALIDATION_WORKSPACE_REQUIRED = "L'espace de travail est requis"
 VALIDATION_ROLE_REQUIRED = "Le rôle est requis"
 VALIDATION_CONTRACT_REQUIRED = "Le type de contrat est requis"
+VALIDATION_REQUIRED_FIELD = "Ce champ est obligatoire"
+
+# Workspaces
+WORKSPACE_ZONES = ["Zone A", "Zone B", "Zone C", "Zone D", "Zone E"]
+
+# Roles
+ROLE_CARISTE = "Cariste"
+ROLE_PREPARATEUR = "Préparateur de commandes"
+ROLE_MAGASINIER = "Magasinier"
+ROLE_RECEVEUR = "Réceptionnaire"
+ROLE_EXPEDITEUR = "Expéditeur"
+
+ROLE_CHOICES = [
+    ROLE_CARISTE,
+    ROLE_PREPARATEUR,
+    ROLE_MAGASINIER,
+    ROLE_RECEVEUR,
+    ROLE_EXPEDITEUR,
+]
+
+# Section Titles
+SECTION_INFO = "Informations"
+SECTION_CACES = "CACES"
+SECTION_MEDICAL = "Visites Médicales"
+SECTION_TRAININGS = "Formations en Ligne"
+
+# Empty States
+EMPTY_NO_EMPLOYEES = "Aucun employé trouvé"
+EMPTY_NO_CACES = "Aucun CACES enregistré"
+EMPTY_NO_VISITS = "Aucune visite médicale enregistrée"
+EMPTY_NO_TRAININGS = "Aucune formation en ligne enregistrée"
+
+# Confirmation Messages
+CONFIRM_DELETE_EMPLOYEE = "Voulez-vous vraiment supprimer cet employé ?"
+CONFIRM_DELETE_WARNING = "Cette action est irréversible."
+CONFIRM_DELETE_CACES = "Voulez-vous vraiment supprimer ce CACES ?"
+CONFIRM_DELETE_VISIT = "Voulez-vous vraiment supprimer cette visite médicale ?"
+
+# Success Messages
+SUCCESS_EMPLOYEE_CREATED = "Employé créé avec succès"
+SUCCESS_EMPLOYEE_UPDATED = "Employé mis à jour avec succès"
+SUCCESS_EMPLOYEE_DELETED = "Employé supprimé avec succès"
+SUCCESS_CACES_CREATED = "CACES ajouté avec succès"
+SUCCESS_CACES_UPDATED = "CACES mis à jour avec succès"
+SUCCESS_CACES_DELETED = "CACES supprimé avec succès"
+SUCCESS_VISIT_CREATED = "Visite médicale ajoutée avec succès"
+SUCCESS_VISIT_UPDATED = "Visite médicale mise à jour avec succès"
+SUCCESS_VISIT_DELETED = "Visite médicale supprimée avec succès"
+
+# Error Messages
+ERROR_LOAD_EMPLOYEES = "Erreur lors du chargement des employés"
+ERROR_LOAD_EMPLOYEE = "Erreur lors du chargement de l'employé"
+ERROR_SAVE_EMPLOYEE = "Erreur lors de l'enregistrement de l'employé"
+ERROR_DELETE_EMPLOYEE = "Erreur lors de la suppression de l'employé"
+ERROR_SAVE_CACES = "Erreur lors de l'enregistrement du CACES"
+ERROR_DELETE_CACES = "Erreur lors de la suppression du CACES"
+ERROR_SAVE_VISIT = "Erreur lors de l'enregistrement de la visite"
+ERROR_DELETE_VISIT = "Erreur lors de la suppression de la visite"
+
+# Expiration Status
+EXPIRATION_STATUS_VALID = "Valide"
+EXPIRATION_STATUS_SOON = "Bientôt"
+EXPIRATION_STATUS_URGENT = "Urgent"
+EXPIRATION_STATUS_EXPIRED = "Expiré"
