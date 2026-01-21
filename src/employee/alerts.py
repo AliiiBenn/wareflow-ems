@@ -138,7 +138,7 @@ class AlertQuery:
             alert = Alert(
                 alert_type=AlertType.CACES,
                 employee=caces.employee,
-                description=f"CACES {caces.caces_type}",
+                description=f"CACES {caces.kind}",
                 expiration_date=caces.expiration_date,
                 days_until=days_until,
                 urgency=urgency

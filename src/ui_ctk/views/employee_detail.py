@@ -252,7 +252,7 @@ class EmployeeDetailView(BaseView):
         # Type and date
         type_label = ctk.CTkLabel(
             item,
-            text=f"{caces.caces_type}",
+            text=f"{caces.kind}",
             font=("Arial", 12, "bold"),
             anchor="w"
         )
