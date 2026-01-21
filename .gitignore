@@ -71,7 +71,14 @@ uv.lock
 *.db-journal
 *.db-wal
 *.db-shm
+*.db.backup_*
 data/
 documents/
 exports/
 logs/
+
+# Test files in root directory (ad-hoc tests)
+test_*.py
+
+# Backup databases
+employee_manager.db.backup_*
