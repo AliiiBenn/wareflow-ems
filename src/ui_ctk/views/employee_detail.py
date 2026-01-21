@@ -32,6 +32,9 @@ from ui_ctk.constants import (
     CONFIRM_DELETE_CACES,
     CONFIRM_DELETE_VISIT,
     ERROR_DELETE_EMPLOYEE,
+    ERROR_DELETE_CACES,
+    ERROR_DELETE_VISIT,
+    VISIT_TYPES,
 )
 
 
@@ -584,18 +587,61 @@ class EmployeeDetailView(BaseView):
 
     def add_medical_visit(self):
         """Add new medical visit."""
-        # Placeholder for future implementation
-        self.show_info("Fonctionnalité à venir dans la Phase 4")
+        try:
+            from ui_ctk.forms.medical_form import MedicalVisitFormDialog
+
+            dialog = MedicalVisitFormDialog(self, employee=self.employee)
+            self.wait_window(dialog)
+
+            if dialog.result:
+                # Reload employee data and refresh view
+                self.refresh_view()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to add medical visit: {e}")
+            self.show_error(f"Failed to add medical visit: {e}")
 
     def edit_medical_visit(self, visit: MedicalVisit):
         """Edit existing medical visit."""
-        # Placeholder for future implementation
-        self.show_info("Fonctionnalité à venir dans la Phase 4")
+        try:
+            from ui_ctk.forms.medical_form import MedicalVisitFormDialog
+
+            dialog = MedicalVisitFormDialog(self, employee=self.employee, visit=visit)
+            self.wait_window(dialog)
+
+            if dialog.result:
+                # Reload employee data and refresh view
+                self.refresh_view()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to edit medical visit: {e}")
+            self.show_error(f"Failed to edit medical visit: {e}")
 
     def delete_medical_visit(self, visit: MedicalVisit):
         """Delete medical visit."""
-        # Placeholder for future implementation
-        self.show_info("Fonctionnalité à venir dans la Phase 4")
+        try:
+            import tkinter.messagebox as messagebox
+
+            # Get French label for visit type
+            visit_type_label = VISIT_TYPES.get(visit.visit_type, visit.visit_type)
+
+            # Confirm deletion
+            confirm = messagebox.askyesno(
+                "Confirm Deletion",
+                f"{CONFIRM_DELETE_VISIT}\n\nType: {visit_type_label}\nDate: {visit.visit_date.strftime(DATE_FORMAT)}\nEmployee: {self.employee.full_name}"
+            )
+
+            if confirm:
+                # Delete visit
+                visit.delete_instance()
+                print(f"[OK] Medical visit deleted: {visit_type_label}")
+
+                # Refresh view
+                self.refresh_view()
+
+        except Exception as e:
+            print(f"[ERROR] Failed to delete medical visit: {e}")
+            self.show_error(f"{ERROR_DELETE_VISIT}: {e}")
 
     def show_error(self, message: str):
         """Show error message to user."""
