@@ -6,6 +6,7 @@ Tests to verify N+1 query problem is fixed and measure performance improvements.
 
 import pytest
 import time
+from datetime import date
 from unittest.mock import patch
 
 from employee.models import Employee, Caces, MedicalVisit, OnlineTraining
@@ -54,9 +55,9 @@ class TestQueryPerformance:
         # Load employees with prefetch
         start = time.time()
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
-                         .prefetch(Caces, MedicalVisit, OnlineTraining)
-                         .order_by(Employee.last_name))
+                         .select()
+                         .order_by(Employee.last_name)
+                         .prefetch(Caces, MedicalVisit, OnlineTraining))
         prefetch_time = time.time() - start
 
         # Access all related data without triggering additional queries
@@ -78,6 +79,7 @@ class TestQueryPerformance:
                 first_name=f"First{i}",
                 last_name=f"Last{i}",
                 email=f"perf{i}@example.com",
+                entry_date=date(2020, 1, 1),
                 current_status="active",
                 workspace="Paris",
                 role="Engineer",
@@ -88,9 +90,9 @@ class TestQueryPerformance:
         # Test with prefetch (should be fast)
         start = time.time()
         loaded = list(Employee
-                      .select(Employee, Caces, MedicalVisit, OnlineTraining)
-                      .prefetch(Caces, MedicalVisit, OnlineTraining)
-                      .order_by(Employee.last_name))
+                      .select()
+                      .order_by(Employee.last_name)
+                      .prefetch(Caces, MedicalVisit, OnlineTraining))
         elapsed = time.time() - start
 
         assert len(loaded) >= 100  # May include test employees from other tests too
@@ -180,9 +182,11 @@ class TestQueryEfficiency:
                 first_name=f"First{i}",
                 last_name=f"Last{i}",
                 email=f"batch{i}@example.com",
+                entry_date=date(2020, 1, 1),
                 current_status="active",
                 workspace="Paris",
-                role="Engineer"
+                role="Engineer",
+                contract_type="CDI"
             )
 
         controller = EmployeeController()
@@ -202,7 +206,7 @@ class TestPrefetchBehavior:
     def test_prefetch_includes_all_employees(self, db, sample_employee):
         """Test that prefetch includes all employees."""
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
+                         .select()
                          .prefetch(Caces, MedicalVisit, OnlineTraining))
 
         assert sample_employee in employees
@@ -210,7 +214,7 @@ class TestPrefetchBehavior:
     def test_prefetch_preserves_relations(self, db, sample_employee_with_data):
         """Test that prefetch correctly loads related data."""
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
+                         .select()
                          .prefetch(Caces, MedicalVisit, OnlineTraining))
 
         # Find our sample employee
@@ -231,7 +235,7 @@ class TestPrefetchBehavior:
         """Test prefetch works with employees having no related data."""
         # Employee with no CACES, visits, or training
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
+                         .select()
                          .prefetch(Caces, MedicalVisit, OnlineTraining))
 
         emp = next((e for e in employees if e.id == sample_employee.id), None)
@@ -259,16 +263,18 @@ class TestPerformanceTargets:
                 first_name=f"First{i}",
                 last_name=f"Last{i}",
                 email=f"target{i}@example.com",
+                entry_date=date(2020, 1, 1),
                 current_status="active",
                 workspace="Paris",
-                role="Engineer"
+                role="Engineer",
+                contract_type="CDI"
             )
 
         start = time.time()
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
-                         .prefetch(Caces, MedicalVisit, OnlineTraining)
-                         .order_by(Employee.last_name))
+                         .select()
+                         .order_by(Employee.last_name)
+                         .prefetch(Caces, MedicalVisit, OnlineTraining))
         elapsed = time.time() - start
 
         # Target: < 500ms for 100 employees
@@ -287,7 +293,7 @@ class TestPerformanceTargets:
         # For now, we just verify it completes quickly
         start = time.time()
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
+                         .select()
                          .prefetch(Caces, MedicalVisit, OnlineTraining))
         elapsed = time.time() - start
 

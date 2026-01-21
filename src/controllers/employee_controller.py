@@ -122,9 +122,9 @@ class EmployeeController:
             - Load time: < 500ms for 100 employees (local DB)
         """
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
-                         .prefetch(Caces, MedicalVisit, OnlineTraining)
-                         .order_by(Employee.last_name, Employee.first_name))
+                         .select()
+                         .order_by(Employee.last_name, Employee.first_name)
+                         .prefetch(Caces, MedicalVisit, OnlineTraining))
         return employees
 
     def get_active_employees_with_relations(self) -> List[Employee]:
@@ -139,7 +139,7 @@ class EmployeeController:
             - Filters for active employees
         """
         employees = list(Employee
-                         .select(Employee, Caces, MedicalVisit, OnlineTraining)
+                         .select()
                          .where(Employee.current_status == 'active')
                          .prefetch(Caces, MedicalVisit, OnlineTraining)
                          .order_by(Employee.last_name, Employee.first_name))
