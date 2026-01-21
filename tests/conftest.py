@@ -233,7 +233,7 @@ def sample_employee_with_data(db):
         title="Safety Training",
         completion_date=date(2020, 2, 1),
         expiration_date=date(2023, 2, 1),
-        document_path="/docs/training.pdf"
+        certificate_path="/docs/training.pdf"
     )
 
     return employee
