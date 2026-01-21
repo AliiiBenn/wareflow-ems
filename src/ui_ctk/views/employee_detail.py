@@ -62,13 +62,10 @@ class EmployeeDetailView(BaseView):
         """
         self.employee = employee
 
-        # Use employee name as title if not provided
-        if not title:
-            title = employee.full_name
+        # Call parent WITHOUT title to avoid creating default header
+        super().__init__(master, title="")
 
-        super().__init__(master, title=title)
-
-        # Create UI
+        # Create UI (header with buttons + content)
         self.create_header()
         self.create_content()
 
