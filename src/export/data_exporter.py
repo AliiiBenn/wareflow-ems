@@ -67,7 +67,6 @@ class DataExporter:
                     'workspace': employee.workspace,
                     'role': employee.role,
                     'contract_type': employee.contract_type,
-                    'comment': employee.comment,
                 },
                 'caces': [
                     {
