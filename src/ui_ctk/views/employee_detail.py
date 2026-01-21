@@ -520,10 +520,16 @@ class EmployeeDetailView(BaseView):
         try:
             # Reload employee data
             self.employee = Employee.get_by_id(self.employee.id)
-            # Destroy current view
-            self.destroy()
-            # Recreate with updated data
-            EmployeeDetailView(self.master, employee=self.employee)
+
+            # Use MainWindow's switch_view to properly recreate the view
+            if self.master_window:
+                self.master_window.switch_view(EmployeeDetailView, employee=self.employee)
+            else:
+                # Fallback: manual recreation (shouldn't happen)
+                print("[WARN] master_window not found, using manual refresh")
+                # Just destroy current view, don't recreate (will be handled by parent)
+                self.destroy()
+
         except Exception as e:
             print(f"[ERROR] Failed to refresh view: {e}")
 
