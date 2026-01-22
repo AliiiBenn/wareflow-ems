@@ -78,8 +78,6 @@ NAV_IMPORT = "Import Excel"
 NAV_BACKUPS = "Sauvegardes"
 
 # Button Labels
-BTN_LOGIN = "Connexion"
-BTN_LOGOUT = "Déconnexion"
 BTN_ADD = "Ajouter"
 BTN_EDIT = "Modifier"
 BTN_DELETE = "Supprimer"
