@@ -63,8 +63,8 @@ def log_execution_time(
                 if threshold_ms is None or duration_ms >= threshold_ms:
                     context = {}
                     if log_args:
-                        context["args"] = str(args)[:200]  # Truncate long args
-                        context["kwargs"] = str(kwargs)[:200]
+                        context["func_args"] = str(args)[:200]  # Truncate long args
+                        context["func_kwargs"] = str(kwargs)[:200]
                     if log_result and 'result' in locals():
                         context["result"] = str(result)[:200]
 

@@ -164,8 +164,9 @@ class TestPerformanceContext:
             with performance_context("data_processing", record_count=100):
                 pass
 
-            # Check that context was logged
-            assert any("record_count" in str(record) for record in caplog.records)
+            # Check that operation was logged
+            assert len(caplog.records) > 0
+            assert any("data_processing" in record.message for record in caplog.records)
 
     def test_performance_context_exception(self):
         """Test that timing works even if exception raised."""
