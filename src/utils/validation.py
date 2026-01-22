@@ -54,6 +54,9 @@ class InputValidator:
     # Allowed values
     ALLOWED_STATUSES = ['active', 'inactive']
     ALLOWED_CONTRACT_TYPES = ['CDI', 'CDD', 'Intérim', 'Alternance', 'Stage']
+    ALLOWED_CACES_KINDS = ['R489-1A', 'R489-1B', 'R489-3', 'R489-4', 'R489-5']
+    ALLOWED_VISIT_TYPES = ['initial', 'periodic', 'recovery']
+    ALLOWED_VISIT_RESULTS = ['fit', 'unfit', 'fit_with_restrictions']
 
     # Date ranges
     MIN_YEAR = 1900
@@ -394,4 +397,147 @@ class InputValidator:
 
         except ValidationError as e:
             # Re-raise with context
+            raise e
+
+    @staticmethod
+    def validate_caces_kind(value: str) -> str:
+        """
+        Validate CACES certification kind.
+
+        Args:
+            value: CACES kind (e.g., 'R489-1A')
+
+        Returns:
+            Validated CACES kind
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if not isinstance(value, str):
+            raise ValidationError("caces_kind", "Must be string type", value)
+
+        value = value.strip()
+        if value not in InputValidator.ALLOWED_CACES_KINDS:
+            raise ValidationError("caces_kind", f"Must be one of: {InputValidator.ALLOWED_CACES_KINDS}", value)
+
+        return value
+
+    @staticmethod
+    def validate_visit_type(value: str) -> str:
+        """
+        Validate medical visit type.
+
+        Args:
+            value: Visit type ('initial', 'periodic', 'recovery')
+
+        Returns:
+            Validated visit type
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if not isinstance(value, str):
+            raise ValidationError("visit_type", "Must be string type", value)
+
+        value = value.strip()
+        if value not in InputValidator.ALLOWED_VISIT_TYPES:
+            raise ValidationError("visit_type", f"Must be one of: {InputValidator.ALLOWED_VISIT_TYPES}", value)
+
+        return value
+
+    @staticmethod
+    def validate_visit_result(value: str) -> str:
+        """
+        Validate medical visit result.
+
+        Args:
+            value: Visit result ('fit', 'unfit', 'fit_with_restrictions')
+
+        Returns:
+            Validated visit result
+
+        Raises:
+            ValidationError: If validation fails
+        """
+        if not isinstance(value, str):
+            raise ValidationError("visit_result", "Must be string type", value)
+
+        value = value.strip()
+        if value not in InputValidator.ALLOWED_VISIT_RESULTS:
+            raise ValidationError("visit_result", f"Must be one of: {InputValidator.ALLOWED_VISIT_RESULTS}", value)
+
+        return value
+
+    @classmethod
+    def validate_caces_data(cls, data: dict) -> dict:
+        """
+        Validate CACES certification data.
+
+        Args:
+            data: Dictionary of CACES data
+
+        Returns:
+            Sanitized and validated data
+
+        Raises:
+            ValidationError: If any validation fails
+        """
+        validated = {}
+
+        try:
+            # Required fields
+            validated['kind'] = cls.validate_caces_kind(data.get('kind', ''))
+
+            completion_date = data.get('completion_date')
+            if completion_date:
+                validated['completion_date'] = cls.validate_date(completion_date, 'completion_date')
+            else:
+                raise ValidationError('completion_date', 'Cannot be empty')
+
+            # Optional fields
+            document_path = data.get('document_path', '')
+            if document_path:
+                validated['document_path'] = cls.sanitize_string(document_path, 500)
+
+            return validated
+
+        except ValidationError as e:
+            raise e
+
+    @classmethod
+    def validate_medical_visit_data(cls, data: dict) -> dict:
+        """
+        Validate medical visit data.
+
+        Args:
+            data: Dictionary of medical visit data
+
+        Returns:
+            Sanitized and validated data
+
+        Raises:
+            ValidationError: If any validation fails
+        """
+        validated = {}
+
+        try:
+            # Required fields
+            validated['visit_type'] = cls.validate_visit_type(data.get('visit_type', ''))
+
+            visit_date = data.get('visit_date')
+            if visit_date:
+                validated['visit_date'] = cls.validate_date(visit_date, 'visit_date')
+            else:
+                raise ValidationError('visit_date', 'Cannot be empty')
+
+            validated['result'] = cls.validate_visit_result(data.get('result', ''))
+
+            # Optional fields
+            document_path = data.get('document_path', '')
+            if document_path:
+                validated['document_path'] = cls.sanitize_string(document_path, 500)
+
+            return validated
+
+        except ValidationError as e:
             raise e

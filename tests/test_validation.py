@@ -308,3 +308,118 @@ class TestValidateEmployeeData:
         }
         with pytest.raises(ValidationError):
             InputValidator.validate_employee_data(data)
+
+
+class TestValidateCACESKind:
+    """Tests for validate_caces_kind method."""
+
+    def test_validate_valid_caces_kind(self):
+        """Test valid CACES kind validation."""
+        result = InputValidator.validate_caces_kind("R489-1A")
+        assert result == "R489-1A"
+
+    def test_validate_caces_kind_invalid_rejected(self):
+        """Test that invalid CACES kind is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            InputValidator.validate_caces_kind("INVALID")
+        assert "Must be one of" in exc_info.value.message
+
+    def test_validate_caces_kind_non_string_rejected(self):
+        """Test that non-string types are rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            InputValidator.validate_caces_kind(123)
+        assert "string type" in exc_info.value.message
+
+
+class TestValidateVisitType:
+    """Tests for validate_visit_type method."""
+
+    def test_validate_valid_visit_type(self):
+        """Test valid visit type validation."""
+        result = InputValidator.validate_visit_type("initial")
+        assert result == "initial"
+
+    def test_validate_visit_type_invalid_rejected(self):
+        """Test that invalid visit type is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            InputValidator.validate_visit_type("invalid_type")
+        assert "Must be one of" in exc_info.value.message
+
+
+class TestValidateVisitResult:
+    """Tests for validate_visit_result method."""
+
+    def test_validate_valid_visit_result(self):
+        """Test valid visit result validation."""
+        result = InputValidator.validate_visit_result("fit")
+        assert result == "fit"
+
+    def test_validate_visit_result_invalid_rejected(self):
+        """Test that invalid visit result is rejected."""
+        with pytest.raises(ValidationError) as exc_info:
+            InputValidator.validate_visit_result("invalid_result")
+        assert "Must be one of" in exc_info.value.message
+
+
+class TestValidateCACESData:
+    """Tests for validate_caces_data method."""
+
+    def test_validate_complete_caces_data(self):
+        """Test validation of complete valid CACES data."""
+        data = {
+            'kind': 'R489-1A',
+            'completion_date': '2024-01-15',
+        }
+        result = InputValidator.validate_caces_data(data)
+        assert result['kind'] == 'R489-1A'
+
+    def test_validate_caces_data_invalid_kind_raises(self):
+        """Test that invalid CACES kind raises ValidationError."""
+        data = {
+            'kind': 'INVALID',
+            'completion_date': '2024-01-15',
+        }
+        with pytest.raises(ValidationError):
+            InputValidator.validate_caces_data(data)
+
+    def test_validate_caces_data_missing_date_raises(self):
+        """Test that missing completion date raises ValidationError."""
+        data = {
+            'kind': 'R489-1A',
+        }
+        with pytest.raises(ValidationError):
+            InputValidator.validate_caces_data(data)
+
+
+class TestValidateMedicalVisitData:
+    """Tests for validate_medical_visit_data method."""
+
+    def test_validate_complete_medical_visit_data(self):
+        """Test validation of complete valid medical visit data."""
+        data = {
+            'visit_type': 'initial',
+            'visit_date': '2024-01-15',
+            'result': 'fit',
+        }
+        result = InputValidator.validate_medical_visit_data(data)
+        assert result['visit_type'] == 'initial'
+        assert result['result'] == 'fit'
+
+    def test_validate_medical_visit_data_invalid_type_raises(self):
+        """Test that invalid visit type raises ValidationError."""
+        data = {
+            'visit_type': 'invalid_type',
+            'visit_date': '2024-01-15',
+            'result': 'fit',
+        }
+        with pytest.raises(ValidationError):
+            InputValidator.validate_medical_visit_data(data)
+
+    def test_validate_medical_visit_data_missing_result_raises(self):
+        """Test that missing result raises ValidationError."""
+        data = {
+            'visit_type': 'initial',
+            'visit_date': '2024-01-15',
+        }
+        with pytest.raises(ValidationError):
+            InputValidator.validate_medical_visit_data(data)
