@@ -192,3 +192,78 @@ def permanent_training(db, sample_employee):
         validity_months=None,  # Permanent
     )
     return training
+
+
+@pytest.fixture
+def sample_employee_with_data(db):
+    """Create sample employee with CACES, visits, and training."""
+    from employee.models import Employee, Caces, MedicalVisit, OnlineTraining
+
+    # Create employee
+    employee = Employee.create(
+        external_id="DATA001",
+        first_name="Jane",
+        last_name="Smith",
+        email="jane.smith@example.com",
+        phone="0987654321",
+        entry_date=date(2020, 1, 15),
+        current_status="active",
+        workspace="Paris",
+        role="Engineer",
+        contract_type="CDI"
+    )
+
+    # Add CACES
+    Caces.create(
+        employee=employee,
+        kind="R489-1A",
+        completion_date=date(2020, 1, 1),
+        expiration_date=date(2025, 1, 1),
+        document_path="/docs/caces.pdf"
+    )
+
+    # Add medical visit
+    MedicalVisit.create(
+        employee=employee,
+        visit_type="initial",
+        visit_date=date(2020, 1, 10),
+        expiration_date=date(2025, 1, 10),
+        result="fit",
+        document_path="/docs/medical.pdf"
+    )
+
+    # Add training
+    OnlineTraining.create(
+        employee=employee,
+        title="Safety Training",
+        completion_date=date(2020, 2, 1),
+        expiration_date=date(2023, 2, 1),
+        certificate_path="/docs/training.pdf"
+    )
+
+    return employee
+
+
+@pytest.fixture
+def multiple_employees(db):
+    """Create multiple employees for testing."""
+    from employee.models import Employee
+
+    employees = []
+
+    for i in range(10):
+        employee = Employee.create(
+            external_id=f"MULTI{i:03d}",
+            first_name=f"First{i}",
+            last_name=f"Last{i}",
+            email=f"multi{i}@example.com",
+            phone=f"12345678{i}",
+            entry_date=date(2020, 1, i+1),
+            current_status="active" if i % 2 == 0 else "inactive",
+            workspace=f"Site{i % 3}",
+            role=f"Role{i % 5}",
+            contract_type="CDI"
+        )
+        employees.append(employee)
+
+    return employees

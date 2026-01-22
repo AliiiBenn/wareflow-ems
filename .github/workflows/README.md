@@ -1,3 +1,6 @@
+<<<<<<< HEAD
+404: Not Found
+=======
 # GitHub Actions CI/CD
 
 This repository uses GitHub Actions for continuous integration and code quality checks.
@@ -178,3 +181,4 @@ open htmlcov/index.html
 - [ ] Add code complexity reports
 - [ ] Enable strict mode for Ruff (B, UP rules)
 - [ ] Add pre-commit hooks
+>>>>>>> origin/main
