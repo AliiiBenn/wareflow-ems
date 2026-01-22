@@ -314,7 +314,7 @@ class MedicalVisit(Model):
     expiration_date = DateField(index=True)
 
     # Visit Result
-    result = CharField()  # 'fit', 'unfit', 'fit_with_restrictions'
+    result = CharField(index=True)  # 'fit', 'unfit', 'fit_with_restrictions'
 
     # Document
     document_path = CharField(null=True)
