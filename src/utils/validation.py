@@ -35,10 +35,10 @@ class ValidationSeverity(Enum):
 class InputValidator:
     """Comprehensive input validation framework."""
 
-    # Character sets
-    ALLOWED_NAME_CHARS = re.compile(r"^[\p{L}\p{M}'\- ]+$", re.UNICODE)
+    # Character sets (simplified - \p{L} not supported in Python regex)
+    # We'll validate using Unicode categories instead in the methods
     ALLOWED_EMAIL_CHARS = re.compile(r"^[a-zA-Z0-9._%+\-@]+$")
-    ALLOWED_PHONE_CHARS = re.compile(r"^[0-9+()\-\s.]+$")
+    ALLOWED_PHONE_CHARS = re.compile(r"^[0-9+()\\-\s.]+$")
 
     # Length limits
     MAX_LENGTH_FIRST_NAME = 50
@@ -135,7 +135,7 @@ class InputValidator:
         # Use Unicode categories: L (Letter), M (Mark)
         if not all(
             unicodedata.category(char).startswith(('L', 'M', 'Zs'))  # Letter, Mark, space
-            or char in "'\-"
+            or char in "'\\-"
             for char in value
         ):
             raise ValidationError(field_name, "Contains invalid characters", value)
@@ -322,7 +322,7 @@ class InputValidator:
             raise ValidationError("external_id", "Cannot be empty")
 
         # Alphanumeric, underscore, hyphen only
-        if not re.match(r'^[a-zA-Z0-9_\-]+$', value):
+        if not re.match(r'^[a-zA-Z0-9_\\-]+$', value):
             raise ValidationError("external_id", "Invalid format (alphanumeric, _, - only)", value)
 
         return value
