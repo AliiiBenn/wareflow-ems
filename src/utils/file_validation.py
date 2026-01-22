@@ -1,0 +1,329 @@
+"""File validation utilities to prevent path traversal attacks.
+
+This module provides secure file path validation and sanitization functions
+to prevent path traversal vulnerabilities and ensure files are within
+allowed directories.
+
+Security Features:
+- Path traversal prevention (../, ..\\)
+- Absolute path blocking
+- UNC path blocking (Windows)
+- File type validation
+- File size validation
+- File existence checking
+"""
+
+import os
+from pathlib import Path
+from typing import Tuple, Optional
+
+
+class FileValidationError(Exception):
+    """Raised when file validation fails."""
+
+    pass
+
+
+# Configuration
+DEFAULT_ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg"}
+DEFAULT_MAX_FILE_SIZE_MB = 10
+DEFAULT_DOCUMENTS_DIR = Path("documents")
+
+
+def validate_document_path(
+    file_path: str,
+    allowed_dir: Optional[Path] = None,
+    allowed_extensions: Optional[set] = None,
+    max_size_mb: Optional[int] = None,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Validate document path is within allowed directory and meets security requirements.
+
+    This function prevents path traversal attacks by:
+    - Resolving the absolute path
+    - Checking it's within the allowed directory
+    - Validating file extension
+    - Checking file size
+
+    Args:
+        file_path: Path to validate
+        allowed_dir: Directory where files are allowed (default: documents/)
+        allowed_extensions: Set of allowed file extensions (default: .pdf, .png, .jpg, .jpeg)
+        max_size_mb: Maximum file size in MB (default: 10)
+
+    Returns:
+        Tuple of (is_valid, error_message)
+
+    Examples:
+        >>> is_valid, error = validate_document_path("documents/cert.pdf")
+        >>> if is_valid:
+        ...     print("File is valid")
+        ... else:
+        ...     print(f"Error: {error}")
+
+    Security:
+        - Blocks path traversal: ../../etc/passwd
+        - Blocks absolute paths: C:\\Windows\\System32
+        - Blocks UNC paths: \\\\evil-server\\share
+        - Validates file extension
+        - Validates file size
+    """
+    if not file_path:
+        return False, "File path is required"
+
+    # Use default allowed directory if not specified
+    if allowed_dir is None:
+        allowed_dir = DEFAULT_DOCUMENTS_DIR
+
+    if allowed_extensions is None:
+        allowed_extensions = DEFAULT_ALLOWED_EXTENSIONS
+
+    if max_size_mb is None:
+        max_size_mb = DEFAULT_MAX_FILE_SIZE_MB
+
+    try:
+        path = Path(file_path).resolve()
+        allowed_resolved = allowed_dir.resolve()
+
+        # Security check 1: Ensure path is within allowed directory
+        # This prevents path traversal attacks
+        try:
+            path.relative_to(allowed_resolved)
+        except ValueError:
+            return False, (
+                f"File must be within '{allowed_dir}' directory. "
+                f"Path traversal is not allowed."
+            )
+
+        # Security check 2: File must exist
+        if not path.exists():
+            return False, "File does not exist"
+
+        # Security check 3: Must be a file, not a directory
+        if not path.is_file():
+            return False, "Path must be a file, not a directory"
+
+        # Security check 4: Validate file extension
+        if path.suffix.lower() not in allowed_extensions:
+            allowed_str = ", ".join(sorted(allowed_extensions))
+            return False, f"Only {allowed_str} files are allowed"
+
+        # Security check 5: Validate file size
+        size_bytes = path.stat().st_size
+        size_mb = size_bytes / (1024 * 1024)
+        if size_mb > max_size_mb:
+            return False, f"File size ({size_mb:.1f}MB) exceeds maximum ({max_size_mb}MB)"
+
+        # All checks passed
+        return True, None
+
+    except PermissionError:
+        return False, "Permission denied accessing file"
+    except OSError as e:
+        return False, f"Invalid file path: {e}"
+    except Exception as e:
+        return False, f"Error validating file: {e}"
+
+
+def sanitize_file_path(file_path: str) -> str:
+    """
+    Sanitize file path by removing dangerous characters.
+
+    This function removes or escapes characters that could be used
+    in path traversal attacks.
+
+    Args:
+        file_path: Path to sanitize
+
+    Returns:
+        Sanitized path string
+
+    Examples:
+        >>> sanitize_file_path("../../../etc/passwd")
+        'etcpasswd'
+        >>> sanitize_file_path("normal_file.pdf")
+        'normal_file.pdf'
+    """
+    # Remove path traversal sequences
+    sanitized = file_path.replace("..", "").replace("\\", "").replace("/", "")
+
+    # Remove null bytes
+    sanitized = sanitized.replace("\x00", "")
+
+    # Remove control characters
+    sanitized = "".join(char for char in sanitized if ord(char) >= 32)
+
+    return sanitized
+
+
+def is_safe_filename(filename: str) -> bool:
+    """
+    Check if filename is safe (no path traversal or special characters).
+
+    Args:
+        filename: Filename to check
+
+    Returns:
+        True if filename is safe, False otherwise
+
+    Examples:
+        >>> is_safe_filename("document.pdf")
+        True
+        >>> is_safe_filename("../../etc/passwd")
+        False
+        >>> is_safe_filename("file\x00.pdf")
+        False
+    """
+    if not filename:
+        return False
+
+    # Check for path traversal
+    if ".." in filename or "/" in filename or "\\" in filename:
+        return False
+
+    # Check for null bytes
+    if "\x00" in filename:
+        return False
+
+    # Check for control characters
+    if any(ord(char) < 32 for char in filename):
+        return False
+
+    # Check for Windows reserved names
+    base_name = filename.split(".")[0].upper()
+    windows_reserved = {
+        "CON", "PRN", "AUX", "NUL",
+        "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+        "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+    }
+    if base_name in windows_reserved:
+        return False
+
+    return True
+
+
+def validate_file_basic(
+    file_path: str,
+    allowed_extensions: Optional[set] = None,
+    max_size_mb: Optional[int] = None,
+) -> Tuple[bool, Optional[str]]:
+    """
+    Validate file basic properties (extension, size, existence).
+
+    This does NOT check if file is in a specific directory.
+    Use this for validating user-selected files before copying.
+
+    Args:
+        file_path: Path to validate
+        allowed_extensions: Allowed file extensions
+        max_size_mb: Maximum file size in MB
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not file_path:
+        return False, "File path is required"
+
+    if allowed_extensions is None:
+        allowed_extensions = DEFAULT_ALLOWED_EXTENSIONS
+
+    if max_size_mb is None:
+        max_size_mb = DEFAULT_MAX_FILE_SIZE_MB
+
+    try:
+        path = Path(file_path).resolve()
+
+        # Check file exists
+        if not path.exists():
+            return False, "File does not exist"
+
+        # Must be a file, not a directory
+        if not path.is_file():
+            return False, "Path must be a file, not a directory"
+
+        # Validate file extension
+        if path.suffix.lower() not in allowed_extensions:
+            allowed_str = ", ".join(sorted(allowed_extensions))
+            return False, f"Only {allowed_str} files are allowed"
+
+        # Validate file size
+        size_bytes = path.stat().st_size
+        size_mb = size_bytes / (1024 * 1024)
+        if size_mb > max_size_mb:
+            return False, f"File size ({size_mb:.1f}MB) exceeds maximum ({max_size_mb}MB)"
+
+        return True, None
+
+    except PermissionError:
+        return False, "Permission denied accessing file"
+    except OSError as e:
+        return False, f"Invalid file path: {e}"
+    except Exception as e:
+        return False, f"Error validating file: {e}"
+
+
+def validate_and_copy_document(
+    source_path: str,
+    dest_dir: Optional[Path] = None,
+    allowed_extensions: Optional[set] = None,
+    max_size_mb: Optional[int] = None,
+) -> Tuple[bool, Optional[str], Optional[str]]:
+    """
+    Validate document and copy to secure storage directory.
+
+    This is the recommended function for handling document uploads:
+    1. Validates the source path (extension, size, existence)
+    2. Generates a unique filename
+    3. Copies file to secure storage
+    4. Returns the new secure path
+
+    Args:
+        source_path: Original file path selected by user
+        dest_dir: Destination directory (default: documents/)
+        allowed_extensions: Allowed file extensions
+        max_size_mb: Maximum file size in MB
+
+    Returns:
+        Tuple of (success, error_message, secure_path)
+
+    Examples:
+        >>> success, error, path = validate_and_copy_document(
+        ...     "/user/uploads/cert.pdf"
+        ... )
+        >>> if success:
+        ...     print(f"File saved to: {path}")
+        ... else:
+        ...     print(f"Error: {error}")
+    """
+    import uuid
+    import shutil
+
+    if dest_dir is None:
+        dest_dir = DEFAULT_DOCUMENTS_DIR
+
+    # Validate source file (without directory check - user can select from anywhere)
+    is_valid, error_msg = validate_file_basic(
+        source_path,
+        allowed_extensions=allowed_extensions,
+        max_size_mb=max_size_mb
+    )
+
+    if not is_valid:
+        return False, error_msg, None
+
+    try:
+        source = Path(source_path).resolve()
+        dest_resolved = dest_dir.resolve()
+        dest_resolved.mkdir(parents=True, exist_ok=True)
+
+        # Generate unique filename to prevent overwrites
+        unique_name = f"{uuid.uuid4()}_{source.name}"
+        dest_path = dest_resolved / unique_name
+
+        # Copy file to secure storage
+        shutil.copy2(source, dest_path)
+
+        return True, None, str(dest_path)
+
+    except Exception as e:
+        return False, f"Failed to copy file: {e}", None

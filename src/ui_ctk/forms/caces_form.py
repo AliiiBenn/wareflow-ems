@@ -20,6 +20,7 @@ from ui_ctk.constants import (
     VALIDATION_DATE_REQUIRED,
 )
 from ui_ctk.forms.base_form import BaseFormDialog
+from utils.file_validation import validate_and_copy_document
 
 
 class CacesFormDialog(BaseFormDialog):
@@ -192,17 +193,54 @@ class CacesFormDialog(BaseFormDialog):
         self.expiration_label.configure(text="Select type and date first", text_color="gray")
 
     def browse_document(self):
-        """Open file browser to select document."""
+        """
+        Open file browser to select document with security validation.
+
+        This method:
+        1. Opens file dialog for user to select a file
+        2. Validates the file (extension, size, existence)
+        3. Copies file to secure documents/ directory
+        4. Stores the secure path in the form
+
+        Security:
+        - Prevents path traversal attacks
+        - Validates file type (PDF only)
+        - Limits file size (max 10MB)
+        - Copies to secure storage with unique UUID
+        """
         try:
             from tkinter import filedialog
+            import tkinter.messagebox as messagebox
 
             file_path = filedialog.askopenfilename(
-                title="Select CACES Certificate PDF", filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
+                title="Select CACES Certificate PDF",
+                filetypes=[("PDF files", "*.pdf"), ("All files", "*.*")]
             )
-            if file_path:
-                self.document_path_var.set(file_path)
+
+            if not file_path:
+                return  # User cancelled
+
+            # Validate and copy to secure storage
+            success, error, secure_path = validate_and_copy_document(
+                file_path,
+                allowed_extensions={".pdf"},  # Only PDF for CACES
+                max_size_mb=10
+            )
+
+            if not success:
+                # Show error to user
+                messagebox.showerror("File Validation Error", error)
+                print(f"[SECURITY] File upload rejected: {error}")
+                return
+
+            # Store secure path in form
+            self.document_path_var.set(secure_path)
+            print(f"[OK] File validated and copied to secure storage: {secure_path}")
+
         except Exception as e:
             print(f"[ERROR] Failed to browse file: {e}")
+            import tkinter.messagebox as messagebox
+            messagebox.showerror("Error", f"Failed to select file: {e}")
 
     def parse_date(self, date_str: str) -> Optional[date]:
         """
