@@ -11,7 +11,7 @@ This module provides comprehensive input validation to protect against:
 import re
 import unicodedata
 from typing import Any, Optional, Tuple, List
-from datetime import datetime
+from datetime import datetime, date
 from enum import Enum
 
 
@@ -226,28 +226,32 @@ class InputValidator:
         return value
 
     @staticmethod
-    def validate_date(value: Any, field_name: str = "date", allow_future: bool = False) -> datetime:
+    def validate_date(value: Any, field_name: str = "date", allow_future: bool = False) -> date:
         """
         Validate date input.
 
         Args:
-            value: Date to validate (string or datetime)
+            value: Date to validate (string, datetime, or date)
             field_name: Field name for error messages
             allow_future: Whether future dates are allowed
 
         Returns:
-            Datetime object
+            Date object (not datetime)
 
         Raises:
             ValidationError: If validation fails
         """
-        # If already datetime, validate range
+        # If already datetime, convert to date and validate range
         if isinstance(value, datetime):
+            value = value.date()
+
+        # If already date, validate range
+        if isinstance(value, date):
             if value.year < InputValidator.MIN_YEAR or value.year > InputValidator.MAX_YEAR:
                 raise ValidationError(field_name, f"Year out of range ({InputValidator.MIN_YEAR}-{InputValidator.MAX_YEAR})", value)
 
             # Cannot be in future (unless allowed)
-            if not allow_future and value > datetime.now():
+            if not allow_future and value > date.today():
                 raise ValidationError(field_name, "Date cannot be in future", value)
 
             return value
@@ -265,14 +269,17 @@ class InputValidator:
                     except ValueError:
                         continue
                 else:
-                    raise ValidationError(field_name, f"Invalid date format (use YYYY-MM-DD)", value)
+                    raise ValidationError(field_name, f"Invalid date format (use YYYY-MM-DD or DD/MM/YYYY)", value)
+
+                # Convert to date
+                parsed_date = parsed_date.date()
 
                 # Validate range
                 if parsed_date.year < InputValidator.MIN_YEAR or parsed_date.year > InputValidator.MAX_YEAR:
                     raise ValidationError(field_name, f"Year out of range ({InputValidator.MIN_YEAR}-{InputValidator.MAX_YEAR})", value)
 
                 # Cannot be in future (unless allowed)
-                if not allow_future and parsed_date > datetime.now():
+                if not allow_future and parsed_date > date.today():
                     raise ValidationError(field_name, "Date cannot be in future", value)
 
                 return parsed_date
