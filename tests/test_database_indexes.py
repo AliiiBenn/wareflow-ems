@@ -59,9 +59,9 @@ class TestMedicalVisitIndexes:
     def test_medical_visit_composite_index(self):
         """Test that composite index on (employee, expiration_date) exists."""
         indexes = MedicalVisit._meta.indexes
-        # Check for composite index
+        # Check for composite index (indexes are tuples in Peewee)
         composite_exists = any(
-            idx.fields == ("employee", "expiration_date") for idx in indexes
+            idx == (("employee", "expiration_date"), False) for idx in indexes
         )
         assert composite_exists, "Composite index on (employee, expiration_date) should exist"
 
@@ -77,8 +77,9 @@ class TestCacesIndexes:
     def test_caces_composite_index(self):
         """Test that composite index on (employee, expiration_date) exists."""
         indexes = Caces._meta.indexes
+        # Check for composite index (indexes are tuples in Peewee)
         composite_exists = any(
-            idx.fields == ("employee", "expiration_date") for idx in indexes
+            idx == (("employee", "expiration_date"), False) for idx in indexes
         )
         assert composite_exists, "Composite index on (employee, expiration_date) should exist"
 
@@ -94,8 +95,9 @@ class TestOnlineTrainingIndexes:
     def test_online_training_composite_index(self):
         """Test that composite index on (employee, expiration_date) exists."""
         indexes = OnlineTraining._meta.indexes
+        # Check for composite index (indexes are tuples in Peewee)
         composite_exists = any(
-            idx.fields == ("employee", "expiration_date") for idx in indexes
+            idx == (("employee", "expiration_date"), False) for idx in indexes
         )
         assert composite_exists, "Composite index on (employee, expiration_date) should exist"
 
@@ -105,6 +107,10 @@ class TestDatabaseIndexesCreated:
 
     def test_employee_indexes_exist_in_db(self):
         """Test that Employee indexes exist in the database."""
+        # Initialize database connection
+        if database.is_closed():
+            database.connect()
+
         cursor = database.cursor()
 
         # Get all indexes on employees table
@@ -126,6 +132,10 @@ class TestDatabaseIndexesCreated:
 
     def test_medical_visit_indexes_exist_in_db(self):
         """Test that MedicalVisit indexes exist in the database."""
+        # Initialize database connection
+        if database.is_closed():
+            database.connect()
+
         cursor = database.cursor()
 
         cursor.execute(
