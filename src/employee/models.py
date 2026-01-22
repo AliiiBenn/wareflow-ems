@@ -60,7 +60,12 @@ class Employee(Model):
     @property
     def seniority(self) -> int:
         """Complete years of service."""
-        return (date.today() - self.entry_date).days // 365
+        # Ensure entry_date is a date object (not datetime)
+        if isinstance(self.entry_date, datetime):
+            entry_date = self.entry_date.date()
+        else:
+            entry_date = self.entry_date
+        return (date.today() - entry_date).days // 365
 
     @property
     def is_active(self) -> bool:
@@ -205,12 +210,22 @@ class Caces(Model):
     @property
     def is_expired(self) -> bool:
         """Check if certification is expired."""
-        return date.today() > self.expiration_date
+        # Ensure expiration_date is a date object (not datetime)
+        if isinstance(self.expiration_date, datetime):
+            expiration_date = self.expiration_date.date()
+        else:
+            expiration_date = self.expiration_date
+        return date.today() > expiration_date
 
     @property
     def days_until_expiration(self) -> int:
         """Days until expiration (negative if already expired)."""
-        return (self.expiration_date - date.today()).days
+        # Ensure expiration_date is a date object (not datetime)
+        if isinstance(self.expiration_date, datetime):
+            expiration_date = self.expiration_date.date()
+        else:
+            expiration_date = self.expiration_date
+        return (expiration_date - date.today()).days
 
     @property
     def status(self) -> str:
@@ -332,12 +347,22 @@ class MedicalVisit(Model):
     @property
     def is_expired(self) -> bool:
         """Check if medical clearance is expired."""
-        return date.today() > self.expiration_date
+        # Ensure expiration_date is a date object (not datetime)
+        if isinstance(self.expiration_date, datetime):
+            expiration_date = self.expiration_date.date()
+        else:
+            expiration_date = self.expiration_date
+        return date.today() > expiration_date
 
     @property
     def days_until_expiration(self) -> int:
         """Days until expiration."""
-        return (self.expiration_date - date.today()).days
+        # Ensure expiration_date is a date object (not datetime)
+        if isinstance(self.expiration_date, datetime):
+            expiration_date = self.expiration_date.date()
+        else:
+            expiration_date = self.expiration_date
+        return (expiration_date - date.today()).days
 
     @property
     def is_fit(self) -> bool:
@@ -451,14 +476,24 @@ class OnlineTraining(Model):
         """Check if training is expired (only if it expires)."""
         if not self.expires:
             return False
-        return date.today() > self.expiration_date
+        # Ensure expiration_date is a date object (not datetime)
+        if isinstance(self.expiration_date, datetime):
+            expiration_date = self.expiration_date.date()
+        else:
+            expiration_date = self.expiration_date
+        return date.today() > expiration_date
 
     @property
     def days_until_expiration(self) -> int | None:
         """Days until expiration, or None if permanent."""
         if not self.expires:
             return None
-        return (self.expiration_date - date.today()).days
+        # Ensure expiration_date is a date object (not datetime)
+        if isinstance(self.expiration_date, datetime):
+            expiration_date = self.expiration_date.date()
+        else:
+            expiration_date = self.expiration_date
+        return (expiration_date - date.today()).days
 
     @property
     def status(self) -> str:
