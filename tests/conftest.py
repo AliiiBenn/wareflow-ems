@@ -28,7 +28,6 @@ def db(test_database_file):
     from database.connection import database
     from employee.models import Caces, Employee, MedicalVisit, OnlineTraining
     from lock.models import AppLock
-    from auth.models import User
 
     # Initialize database with temporary file
     database.init(test_database_file)
@@ -46,7 +45,6 @@ def db(test_database_file):
             MedicalVisit,
             OnlineTraining,
             AppLock,
-            User,
         ],
         safe=True,
     )
@@ -61,7 +59,6 @@ def db(test_database_file):
             MedicalVisit,
             OnlineTraining,
             AppLock,
-            User,
         ]
     )
 

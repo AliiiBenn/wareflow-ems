@@ -30,14 +30,8 @@ from ui_ctk.main_window import MainWindow
 # Import backup manager for automatic backups
 from utils.backup_manager import BackupManager
 
-# Import authentication system
-from auth.models import User, create_tables
-from auth.session import get_current_user, is_authenticated
-from ui_ctk.views.login_view import LoginView, create_default_admin
-
 # Import logging system
 from utils.logging_config import setup_logging, get_logger
-from utils.security_logger import log_authentication, log_authorization
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -96,9 +90,6 @@ def setup_database(db_path: str = None):
             safe=True,
         )
 
-        # Create authentication tables
-        create_tables()
-
         print(f"[OK] Database initialized: {db_path}")
         print("      Connected successfully")
 
@@ -144,13 +135,12 @@ def create_startup_backup(db_path: str = None):
         print("[INFO] Application continuing without backup")
 
 
-def create_main_window(app: ctk.CTk, user: User) -> MainWindow:
+def create_main_window(app: ctk.CTk) -> MainWindow:
     """
     Create and configure main application window.
 
     Args:
         app: CustomTkinter root application
-        user: Authenticated user
 
     Returns:
         Configured MainWindow instance
@@ -159,93 +149,26 @@ def create_main_window(app: ctk.CTk, user: User) -> MainWindow:
     window = MainWindow(app)
     window.pack(fill="both", expand=True)
 
-    # Pass user to window for future use (permissions, etc.)
-    window.current_user = user
-
     print("[OK] Main window created")
-    print(f"      User: {user.username} ({user.role})")
     print(f"      Size: {DEFAULT_WIDTH}x{DEFAULT_HEIGHT}")
 
     return window
 
 
-def show_login_screen(app: ctk.CTk):
+def show_main_application(app: ctk.CTk):
     """
-    Show login screen and handle authentication.
+    Show main application.
 
     Args:
         app: CustomTkinter root application
     """
-    print("\n" + "=" * 50)
-    print(" AUTHENTICATION REQUIRED")
-    print("=" * 50)
-
-    # Log authentication requirement
-    logger.info("Authentication required, showing login screen")
-
-    # Ensure default admin exists
-    admin = create_default_admin()
-    if admin:
-        print(f"\n[INFO] Default admin account created:")
-        print(f"       Username: {admin.username}")
-        print(f"       Password: Admin123!")
-        print(f"       Email: {admin.email}")
-        print(f"\n[WARN] Please change the default password after first login!\n")
-        logger.warning(f"Default admin account created: {admin.username}")
-
-    # Create and show login view
-    login_view = LoginView(app, login_success_callback=lambda user: on_login_success(app, user))
-    login_view.pack(fill="both", expand=True)
-
-    print("[OK] Login screen displayed")
-
-
-def on_login_success(app: ctk.CTk, user: User):
-    """
-    Handle successful user login.
-
-    Args:
-        app: CustomTkinter root application
-        user: Authenticated user
-    """
-    # Log successful authentication
-    log_authentication(
-        "login",
-        user.username,
-        success=True,
-    )
-    logger.info(f"User logged in: {user.username} (role: {user.role})")
-
-    # Show main application
-    show_main_application(app, user)
-
-
-def show_main_application(app: ctk.CTk, user: User):
-    """
-    Show main application after successful login.
-
-    Args:
-        app: CustomTkinter root application
-        user: Authenticated user
-    """
-    print("\n" + "=" * 50)
-    print(" ACCESS GRANTED")
-    print("=" * 50)
-    print(f"User: {user.username}")
-    print(f"Role: {user.role}")
-    print("=" * 50 + "\n")
-
-    # Clear login view
-    for widget in app.winfo_children():
-        widget.destroy()
-
-    # Create main window
-    main_window = create_main_window(app, user)
-
     print("\n" + "=" * 50)
     print(" APPLICATION STARTING")
     print("=" * 50)
     print("\n[INFO] Press Ctrl+C or close window to exit\n")
+
+    # Create main window
+    main_window = create_main_window(app)
 
 
 def main():
@@ -278,21 +201,14 @@ def main():
 
     print("[OK] Application window created")
 
-    # Step 4: Show login screen (authentication required)
-    show_login_screen(app)
+    # Step 4: Show main application
+    show_main_application(app)
 
     # Step 5: Configure protocol for graceful shutdown
     def on_closing():
         """Handle application closing."""
         print("\n[INFO] Shutting down application...")
         logger.info("Application shutdown requested")
-
-        # Log logout if authenticated
-        if is_authenticated():
-            user = get_current_user()
-            print(f"[INFO] Logging out: {user.username}")
-            log_authentication("logout", user.username, success=True)
-            logger.info(f"User logged out: {user.username}")
 
         # Close database connection
         if not database.is_closed():
@@ -308,7 +224,7 @@ def main():
 
     app.protocol("WM_DELETE_WINDOW", on_closing)
 
-    # Step 6: Start application loop
+    # Step 5: Start application loop
     try:
         app.mainloop()
     except KeyboardInterrupt:
