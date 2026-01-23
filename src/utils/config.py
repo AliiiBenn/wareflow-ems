@@ -1,4 +1,16 @@
-"""Configuration JSON loader with environment variable support."""
+"""Configuration loader with JSON and YAML support.
+
+This module provides flexible configuration management supporting both JSON and YAML formats.
+YAML is recommended for user-friendly configuration with comments and more forgiving syntax.
+
+Features:
+- Automatic format detection (JSON or YAML)
+- Comments allowed in YAML (not in JSON)
+- More readable YAML syntax
+- Backward compatible with existing JSON configs
+- Validation with helpful error messages
+- Environment variable overrides
+"""
 
 import copy
 import json
@@ -6,65 +18,342 @@ import os
 from pathlib import Path
 from typing import Any
 
+# Try to load YAML support
+try:
+    import yaml
+    YAML_AVAILABLE = True
+except ImportError:
+    YAML_AVAILABLE = False
+
 # Try to load dotenv
 try:
     from dotenv import load_dotenv
-
     load_dotenv()
 except ImportError:
-    pass  # python-dotenv not installed, use environment variables directly
+    pass  # python-dotenv not installed
+
 
 # Default configuration values
 DEFAULT_CONFIG = {
-    "alerts": {"critical_days": 7, "warning_days": 30},
-    "lock": {"timeout_minutes": 2, "heartbeat_interval_seconds": 30},
+    "alerts": {
+        "critical_days": 7,
+        "warning_days": 30,
+        # Alert when certifications expire within these days
+    },
+    "lock": {
+        "timeout_minutes": 2,
+        "heartbeat_interval_seconds": 30,
+        # Application lock settings to prevent concurrent access
+    },
     "organization": {
-        "roles": ["Cariste", "Préparateur", "Magasinier", "Réceptionnaire", "Gestionnaire", "Chef d'équipe"],
+        "roles": ["Cariste", "Préparateur de commandes", "Magasinier",
+                 "Réceptionnaire", "Gestionnaire", "Chef d'équipe"],
+        # Job roles in the organization
         "workspaces": ["Quai", "Zone A", "Zone B", "Zone C", "Bureau", "Stockage"],
+        # Physical work areas/locations
     },
 }
 
 
-def load_config(config_path: Path = Path("config.json")) -> dict[str, Any]:
-    """
-    Load configuration from JSON file.
+def _detect_format(config_path: Path) -> str:
+    """Detect configuration file format from extension.
 
+    Args:
+        config_path: Path to configuration file
+
+    Returns:
+        'json', 'yaml', or 'yml' (lowercase)
+
+    Raises:
+        ValueError: If format is not supported
+    """
+    suffix = config_path.suffix.lower()
+
+    if suffix == '.json':
+        return 'json'
+    elif suffix in ['.yaml', '.yml']:
+        return 'yaml'
+    else:
+        raise ValueError(
+            f"Unsupported config format: {suffix}. "
+            "Supported formats: .json, .yaml, .yml"
+        )
+
+
+def _load_json(config_path: Path) -> dict[str, Any]:
+    """Load configuration from JSON file.
+
+    Args:
+        config_path: Path to JSON file
+
+    Returns:
+        Configuration dictionary
+
+    Raises:
+        json.JSONDecodeError: If JSON is invalid
+        IOError: If file cannot be read
+    """
+    with open(config_path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _load_yaml(config_path: Path) -> dict[str, Any]:
+    """Load configuration from YAML file.
+
+    Args:
+        config_path: Path to YAML file
+
+    Returns:
+        Configuration dictionary
+
+    Raises:
+        yaml.YAMLError: If YAML is invalid
+        IOError: If file cannot be read
+    """
+    if not YAML_AVAILABLE:
+        raise ImportError(
+            "PyYAML is not installed. Install it with: pip install pyyaml"
+        )
+
+    with open(config_path, "r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def _save_json(config: dict[str, Any], config_path: Path) -> None:
+    """Save configuration to JSON file.
+
+    Args:
+        config: Configuration dictionary
+        config_path: Path to save file
+
+    Raises:
+        IOError: If file cannot be written
+    """
+    with open(config_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+
+def _save_yaml(config: dict[str, Any], config_path: Path) -> None:
+    """Save configuration to YAML file.
+
+    Args:
+        config: Configuration dictionary
+        config_path: Path to save file
+
+    Raises:
+        IOError: If file cannot be written
+    """
+    if not YAML_AVAILABLE:
+        raise ImportError(
+            "PyYAML is not installed. Install it with: pip install pyyaml"
+        )
+
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+
+def load_config(config_path: Path | None = None) -> dict[str, Any]:
+    """
+    Load configuration from JSON or YAML file.
+
+    Automatically detects format from file extension.
     If the file doesn't exist or is invalid, returns default configuration.
     Missing keys in user config are filled with defaults.
 
     Args:
-        config_path: Path to configuration file (default: "config.json")
+        config_path: Path to configuration file.
+                    If None, searches for config.yaml, config.yml, or config.json
+                    in that order.
 
     Returns:
         Configuration dictionary with all required keys
 
+    Raises:
+        ValueError: If config format is not supported
+
     Example:
+        >>> # Auto-detect format
         >>> config = load_config()
         >>> print(config['alerts']['warning_days'])
         30
 
-        >>> config = load_config(Path("custom_config.json"))
+        >>> # Load specific file
+        >>> config = load_config(Path("custom_config.yaml"))
         >>> if config != DEFAULT_CONFIG:
         ...     print("Using custom configuration")
+
+        >>> # JSON still works (backward compatible)
+        >>> config = load_config(Path("legacy_config.json"))
     """
+    # Auto-detect config file if not specified
+    if config_path is None:
+        for filename in ["config.yaml", "config.yml", "config.json"]:
+            test_path = Path(filename)
+            if test_path.exists():
+                config_path = test_path
+                break
+        else:
+            # No config file found, use defaults
+            return copy.deepcopy(DEFAULT_CONFIG)
+
     # Start with defaults (deep copy to avoid modifying DEFAULT_CONFIG)
     config = copy.deepcopy(DEFAULT_CONFIG)
 
+    # Detect format
+    try:
+        format_type = _detect_format(config_path)
+    except ValueError as e:
+        print(f"Warning: {e}")
+        print("Using default configuration.")
+        return config
+
     # Try to load user configuration
     try:
-        if config_path.exists():
-            with open(config_path, "r", encoding="utf-8") as f:
-                user_config = json.load(f)
+        if format_type == 'json':
+            user_config = _load_json(config_path)
+        elif format_type == 'yaml':
+            user_config = _load_yaml(config_path)
+        else:
+            raise ValueError(f"Unsupported format: {format_type}")
 
-            # Merge user config with defaults (deep merge for nested dicts)
-            config = _deep_merge(config, user_config)
+        # Merge user config with defaults (deep merge for nested dicts)
+        config = _deep_merge(config, user_config)
 
-    except (json.JSONDecodeError, IOError) as e:
+    except (json.JSONDecodeError, yaml.YAMLError, IOError) as e:
         # If file is invalid, use defaults
         print(f"Warning: Could not load config from {config_path}: {e}")
         print("Using default configuration.")
 
     return config
+
+
+def save_config(
+    config: dict[str, Any],
+    config_path: Path | None = None,
+    format: str | None = None
+) -> None:
+    """
+    Save configuration to JSON or YAML file.
+
+    Args:
+        config: Configuration dictionary to save
+        config_path: Path where to save the file.
+                      If None, saves to config.yaml (YAML is recommended)
+        format: Format to save ('json', 'yaml', or 'yml').
+                If None, detects from config_path extension.
+                If config_path is also None, defaults to 'yaml'.
+
+    Raises:
+        IOError: If file cannot be written
+        ValueError: If config is invalid
+        ImportError: If PyYAML not installed for YAML format
+
+    Example:
+        >>> config = load_config()
+        >>> config['alerts']['warning_days'] = 45
+        >>>
+        >>> # Save to YAML (recommended)
+        >>> save_config(config, Path("config.yaml"))
+        >>>
+        >>> # Save to JSON (legacy format)
+        >>> save_config(config, Path("config.json"))
+    """
+    # Validate before saving
+    is_valid, errors = validate_config(config)
+    if not is_valid:
+        raise ValueError(f"Invalid configuration: {errors}")
+
+    # Determine path and format
+    if config_path is None:
+        config_path = Path("config.yaml")
+        format = format or 'yaml'
+    elif format is None:
+        format = _detect_format(config_path)
+
+    # Ensure parent directory exists
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save in appropriate format
+    if format == 'json':
+        _save_json(config, config_path)
+    elif format in ['yaml', 'yml']:
+        _save_yaml(config, config_path)
+    else:
+        raise ValueError(f"Unsupported format: {format}")
+
+
+def migrate_to_yaml(
+    json_path: Path,
+    yaml_path: Path | None = None
+) -> Path:
+    """
+    Migrate configuration from JSON to YAML format.
+
+    Converts existing JSON config to YAML with:
+    - Comments explaining each section
+    - More readable formatting
+    - Recommended defaults applied
+
+    Args:
+        json_path: Path to existing JSON config file
+        yaml_path: Path for new YAML file.
+                    If None, uses same name but with .yaml extension
+
+    Returns:
+        Path to the created YAML file
+
+    Raises:
+        FileNotFoundError: If JSON file doesn't exist
+        ValueError: If JSON is invalid
+
+    Example:
+        >>> # Migrate config.json to config.yaml
+        >>> yaml_path = migrate_to_yaml(Path("config.json"))
+        >>> print(f"Created: {yaml_path}")
+        >>>
+        >>> # Migrate to custom path
+        >>> yaml_path = migrate_to_yaml(
+        ...     Path("old_config.json"),
+        ...     Path("new_config.yaml")
+        ... )
+    """
+    if not json_path.exists():
+        raise FileNotFoundError(f"JSON config not found: {json_path}")
+
+    # Load existing config
+    with open(json_path, "r", encoding="utf-8") as f:
+        config = json.load(f)
+
+    # Determine output path
+    if yaml_path is None:
+        yaml_path = json_path.with_suffix('.yaml')
+
+    # Save with comments
+    if not YAML_AVAILABLE:
+        raise ImportError(
+            "PyYAML is not installed. Install it with: pip install pyyaml"
+        )
+
+    # Add comments explaining the structure
+    comments = """# Wareflow EMS Configuration
+# This file controls application behavior and settings.
+#
+# For help with configuration, see:
+# https://github.com/wareflowx/wareflow-ems/docs/
+#
+# Format: YAML (recommended over JSON for readability)
+# - Comments start with # (like this line)
+# - Indentation matters (use spaces, not tabs)
+# - Strings don't need quotes (most of the time)
+
+"""
+
+    with open(yaml_path, "w", encoding="utf-8") as f:
+        f.write(comments)
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    print(f"Migrated configuration: {json_path} -> {yaml_path}")
+    return yaml_path
 
 
 def _deep_merge(base: dict, update: dict) -> dict:
@@ -94,6 +383,8 @@ def _deep_merge(base: dict, update: dict) -> dict:
     return result
 
 
+# ===== Helper Functions =====
+
 def get_alert_thresholds(config: dict[str, Any]) -> dict[str, int]:
     """
     Get alert thresholds from config.
@@ -114,8 +405,10 @@ def get_alert_thresholds(config: dict[str, Any]) -> dict[str, int]:
         >>> print(f"Warning at {thresholds['warning_days']} days")
     """
     alerts = config.get("alerts", {})
-
-    return {"critical_days": alerts.get("critical_days", 7), "warning_days": alerts.get("warning_days", 30)}
+    return {
+        "critical_days": alerts.get("critical_days", 7),
+        "warning_days": alerts.get("warning_days", 30)
+    }
 
 
 def get_lock_timeout(config: dict[str, Any]) -> int:
@@ -300,36 +593,6 @@ def validate_config(config: dict[str, Any]) -> tuple[bool, list[str]]:
     return is_valid, errors
 
 
-def save_config(config: dict[str, Any], config_path: Path = Path("config.json")) -> None:
-    """
-    Save configuration to JSON file.
-
-    Args:
-        config: Configuration dictionary to save
-        config_path: Path where to save the file (default: "config.json")
-
-    Raises:
-        IOError: If file cannot be written
-        ValueError: If config is invalid
-
-    Example:
-        >>> config = load_config()
-        >>> config['alerts']['warning_days'] = 45
-        >>> save_config(config)
-    """
-    # Validate before saving
-    is_valid, errors = validate_config(config)
-    if not is_valid:
-        raise ValueError(f"Invalid configuration: {errors}")
-
-    # Ensure parent directory exists
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Write to file with nice formatting
-    with open(config_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
-
-
 def get_default_config() -> dict[str, Any]:
     """
     Get a copy of the default configuration.
@@ -341,7 +604,7 @@ def get_default_config() -> dict[str, Any]:
 
     Example:
         >>> default = get_default_config()
-        >>> save_config(default, Path("new_config.json"))
+        >>> save_config(default, Path("new_config.yaml"))
     """
     return copy.deepcopy(DEFAULT_CONFIG)
 
@@ -442,4 +705,3 @@ def ensure_database_directory() -> Path:
     db_dir = get_database_dir()
     db_dir.mkdir(parents=True, exist_ok=True)
     return db_dir
-

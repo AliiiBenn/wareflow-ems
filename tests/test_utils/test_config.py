@@ -1,4 +1,4 @@
-"""Tests for configuration utilities."""
+"""Tests for configuration utilities with YAML support."""
 
 import os
 import pytest
@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from utils import config
+from utils.config import YAML_AVAILABLE
 
 
 class TestLoadConfig:
@@ -172,7 +173,7 @@ class TestGetRoles:
 
         assert len(roles) > 0
         assert "Cariste" in roles
-        assert "Préparateur" in roles
+        assert "Préparateur de commandes" in roles
 
     def test_get_roles_custom(self):
         """Should return custom roles."""

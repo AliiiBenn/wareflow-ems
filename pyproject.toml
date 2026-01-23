@@ -19,6 +19,7 @@ dependencies = [
     "pypdf>=5.1.0",
     "requests>=2.31.0",
     "packaging>=21.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
