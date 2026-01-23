@@ -150,13 +150,37 @@ jobs:
         run: |
           PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
 
+          # Generate release notes using changelog generator
           if [ -z "$PREV_TAG" ]; then
-            echo "## What's Changed" > release_notes.md
-            git log --pretty=format="- %s" --reverse HEAD >> release_notes.md
+            python build/generate_changelog.py --version "${{ steps.version.outputs.version }}" > release_notes.md
           else
-            echo "## What's Changed since ${PREV_TAG}" > release_notes.md
-            git log --pretty=format="- %s" --reverse ${PREV_TAG}..HEAD >> release_notes.md
+            python build/generate_changelog.py --version "${{ steps.version.outputs.version }}" --from-tag "$PREV_TAG" > release_notes.md
           fi
+
+          # Add upgrade instructions
+          cat >> release_notes.md << 'EOF'
+
+          ## 🔄 Upgrading
+
+          ### Using the update command
+          ```bash
+          wems update
+          ```
+
+          ### Manual download
+          1. Download the executable for your platform
+          2. Verify SHA256 checksum
+          3. Replace old executable
+          4. Run migration if needed: `wems upgrade`
+
+          ### Checksums
+          SHA256 checksums are provided for all executables. Verify before running.
+
+          ## 📞 Support
+          - Documentation: See [docs/](../docs/)
+          - Report Issues: [GitHub Issues](https://github.com/wareflowx/wareflow-ems/issues)
+          - Discussions: [GitHub Discussions](https://github.com/wareflowx/wareflow-ems/discussions)
+          EOF
 
           cat release_notes.md
         shell: bash
@@ -174,3 +198,18 @@ jobs:
             checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update CHANGELOG.md
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          python build/generate_changelog.py --version "${{ steps.version.outputs.version }}" --from-tag "$PREV_TAG" --update-file
+        shell: bash
+
+      - name: Commit CHANGELOG.md
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore: update CHANGELOG for ${{ steps.version.outputs.version }}"
+          git push
+        shell: bash
