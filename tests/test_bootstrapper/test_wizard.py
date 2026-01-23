@@ -129,15 +129,18 @@ class TestAskFunctions:
         assert result["backup_retention"] == 60
         assert result["enable_auto_backup"] is True
 
+    @patch("bootstrapper.wizard.questionary.text")
     @patch("bootstrapper.wizard.questionary.select")
-    def test_ask_interface(self, mock_select):
+    def test_ask_interface(self, mock_select, mock_text):
         """Should collect interface preferences."""
         # Mock select for theme
         mock_select.return_value = Mock(ask=lambda: "light")
+        mock_text.return_value = Mock(ask=lambda: "Test App")
 
         result = wizard.ask_interface()
 
         assert result["theme"] == "light"
+        assert result["app_title"] == "Test App"
 
     @patch("bootstrapper.wizard.questionary.confirm")
     def test_ask_advanced(self, mock_confirm):
@@ -275,7 +278,30 @@ class TestConfirmConfiguration:
         """Should return True when user confirms."""
         mock_confirm.return_value = Mock(ask=lambda: True)
 
-        answers = {"company": {"company_name": "Test"}}
+        answers = {
+            "company": {
+                "company_name": "Test Company",
+                "contact_email": "test@example.com",
+                "contact_phone": "1234567890",
+            },
+            "organization": {
+                "workspaces": ["Zone A"],
+                "roles": ["Role A"],
+            },
+            "alerts": {
+                "critical_days": 5,
+                "warning_days": 20,
+                "info_days": 60,
+            },
+            "database": {
+                "database_filename": "test.db",
+                "backup_retention": 30,
+                "enable_auto_backup": True,
+            },
+            "interface": {
+                "theme": "dark",
+            },
+        }
 
         result = wizard.confirm_configuration(answers)
 
@@ -286,7 +312,30 @@ class TestConfirmConfiguration:
         """Should return False when user rejects."""
         mock_confirm.return_value = Mock(ask=lambda: False)
 
-        answers = {"company": {"company_name": "Test"}}
+        answers = {
+            "company": {
+                "company_name": "Test Company",
+                "contact_email": "test@example.com",
+                "contact_phone": "1234567890",
+            },
+            "organization": {
+                "workspaces": ["Zone A"],
+                "roles": ["Role A"],
+            },
+            "alerts": {
+                "critical_days": 5,
+                "warning_days": 20,
+                "info_days": 60,
+            },
+            "database": {
+                "database_filename": "test.db",
+                "backup_retention": 30,
+                "enable_auto_backup": True,
+            },
+            "interface": {
+                "theme": "dark",
+            },
+        }
 
         result = wizard.confirm_configuration(answers)
 
@@ -349,7 +398,7 @@ class TestRunSetupWizard:
         mock_path.return_value.exists.return_value = False
 
         # Mock confirmation accepted
-        mock_confirm.return_value = True
+        mock_confirm.return_value = Mock(ask=lambda: True)
 
         # Mock built config
         test_config = {"organization": {"company_name": "Test"}}
