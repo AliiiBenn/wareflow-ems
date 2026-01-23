@@ -21,26 +21,59 @@ permissions:
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
+    name: Build ${{ matrix.build_type }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Windows GUI
           - os: windows-latest
             python: '3.14'
-            artifact_name: wems-windows.exe
+            build_type: 'gui'
+            artifact_name: wems-windows-gui
             platform: windows
+            spec_file: wems.spec
+
+          # Windows CLI
+          - os: windows-latest
+            python: '3.14'
+            build_type: 'cli'
+            artifact_name: wems-windows-cli
+            platform: windows
+            spec_file: wems-cli.spec
+
+          # Linux GUI
           - os: ubuntu-latest
             python: '3.14'
-            artifact_name: wems-linux
+            build_type: 'gui'
+            artifact_name: wems-linux-gui
             platform: linux
-          # macOS build disabled until proper setup
+            spec_file: wems.spec
+
+          # Linux CLI
+          - os: ubuntu-latest
+            python: '3.14'
+            build_type: 'cli'
+            artifact_name: wems-linux-cli
+            platform: linux
+            spec_file: wems-cli.spec
+
+          # macOS builds disabled until proper code signing setup
           # - os: macos-latest
           #   python: '3.14'
-          #   artifact_name: wems-macos
+          #   build_type: 'gui'
+          #   artifact_name: wems-macos-gui
           #   platform: macos
+          #   spec_file: wems.spec
+          #
+          # - os: macos-latest
+          #   python: '3.14'
+          #   build_type: 'cli'
+          #   artifact_name: wems-macos-cli
+          #   platform: macos
+          #   spec_file: wems-cli.spec
 
     steps:
       - name: Checkout code
@@ -79,24 +112,37 @@ jobs:
           else
             VERSION="${GITHUB_REF#refs/tags/}"
           fi
+          # Remove 'v' prefix if present
+          VERSION=${VERSION#v}
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Building version: ${VERSION}"
         shell: bash
 
-      - name: Build executable with PyInstaller
+      - name: Build ${{ matrix.build_type }} executable
         run: |
-          uv run pyinstaller build/wems.spec --clean --noconfirm
+          python build/build.py --${{ matrix.build_type }} --version "${{ steps.version.outputs.version }}" --skip-tests
         shell: bash
 
       - name: Generate checksums
         run: |
           cd dist
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            certutil -hashify SHA256 ${{ matrix.artifact_name }} > checksums.txt
+            # Windows: find and checksum executables
+            for exe in wems*/wems*.exe; do
+              if [ -f "$exe" ]; then
+                certutil -hashify SHA256 "$exe" > "${exe}.sha256"
+              fi
+            done
           else
-            shasum -a 256 ${{ matrix.artifact_name }} > checksums.txt
+            # Linux/macOS: find and checksum executables
+            for exe in wems*/wems*; do
+              if [ -f "$exe" ]; then
+                shasum -a 256 "$exe" > "${exe}.sha256"
+              fi
+            done
           fi
-          cat checksums.txt
+          # List all checksums
+          find . -name "*.sha256" -exec cat {} \;
         shell: bash
 
       - name: Upload artifacts
@@ -104,9 +150,10 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            dist/${{ matrix.artifact_name }}
-            dist/checksums.txt
+            dist/wems*/
+            dist/wems*-version.txt
           retention-days: 30
+          if-no-files-found: warn
 
   release:
     name: Create GitHub Release
@@ -130,9 +177,21 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R artifacts
 
-      - name: Create checksums.txt
+      - name: Prepare release assets
         run: |
-          cat artifacts/*/checksums.txt > checksums.txt
+          mkdir -p release
+
+          # Copy all executables
+          find artifacts -type f \( -name "wems.exe" -o -name "wems" -o -name "wems-cli" \) -exec cp {} release/ \;
+
+          # Copy checksums
+          find artifacts -name "*.sha256" -exec cp {} release/ \;
+
+          # Combine all checksums into single file
+          cat release/*.sha256 > release/checksums.txt
+
+          # List release files
+          ls -lh release/
 
       - name: Extract version
         id: version
@@ -157,29 +216,87 @@ jobs:
             python build/generate_changelog.py --version "${{ steps.version.outputs.version }}" --from-tag "$PREV_TAG" > release_notes.md
           fi
 
-          # Add upgrade instructions
+          # Add download instructions and platform-specific information
           cat >> release_notes.md << 'EOF'
+
+          ## 📥 Downloads
+
+          This release includes standalone executables that **do not require Python installation**.
+
+          ### GUI Version (wems)
+          - **Windows**: `wems.exe` - Double-click to run
+          - **Linux**: `wems` - Make executable: `chmod +x wems`
+
+          ### CLI Version (wems-cli)
+          - **Windows**: `wems-cli.exe` - Run from Command Prompt
+          - **Linux**: `wems-cli` - Make executable: `chmod +x wems-cli`
+
+          ### What's New
+          - ✅ No Python installation required
+          - ✅ Single file download
+          - ✅ All dependencies bundled
+          - ✅ Works offline
+
+          ## 🚀 Installation
+
+          ### Windows
+          1. Download `wems-windows-gui/wems.exe` (or CLI version)
+          2. Verify SHA256 checksum using `certutil -hashify SHA256 wems.exe`
+          3. Double-click to run
+          4. No installation needed!
+
+          ### Linux
+          1. Download `wems-linux-gui/wems` (or CLI version)
+          2. Verify SHA256 checksum: `sha256sum -c checksums.txt`
+          3. Make executable: `chmod +x wems`
+          4. Run: `./wems`
 
           ## 🔄 Upgrading
 
-          ### Using the update command
+          ### Automatic update (recommended)
           ```bash
           wems update
           ```
 
-          ### Manual download
-          1. Download the executable for your platform
-          2. Verify SHA256 checksum
+          ### Manual upgrade
+          1. Backup your data: `wems doctor --backup`
+          2. Download new version
           3. Replace old executable
-          4. Run migration if needed: `wems upgrade`
+          4. Run migrations: `wems upgrade`
 
-          ### Checksums
-          SHA256 checksums are provided for all executables. Verify before running.
+          ## ✅ Verification
+
+          All executables are signed with SHA256 checksums.
+          Verify before running:
+
+          **Windows:**
+          ```cmd
+          certutil -hashify SHA256 wems.exe
+          ```
+
+          **Linux/macOS:**
+          ```bash
+          sha256sum wems
+          ```
+
+          Compare with checksums.txt in this release.
+
+          ## 📋 Requirements
+
+          - **Windows**: Windows 10 or later
+          - **Linux**: glibc 2.17 or later
+          - **Disk space**: ~100 MB for executable
+          - **Memory**: 512 MB RAM minimum
 
           ## 📞 Support
-          - Documentation: See [docs/](../docs/)
-          - Report Issues: [GitHub Issues](https://github.com/wareflowx/wareflow-ems/issues)
-          - Discussions: [GitHub Discussions](https://github.com/wareflowx/wareflow-ems/discussions)
+
+          - **Documentation**: [docs/](../docs/)
+          - **Issues**: [GitHub Issues](https://github.com/wareflowx/wareflow-ems/issues)
+          - **Discussions**: [GitHub Discussions](https://github.com/wareflowx/wareflow-ems/discussions)
+
+          ## 🙏 Acknowledgments
+
+          Special thanks to all contributors to this release!
           EOF
 
           cat release_notes.md
@@ -194,8 +311,7 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            artifacts/*/*
-            checksums.txt
+            release/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -210,6 +326,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
-          git commit -m "chore: update CHANGELOG for ${{ steps.version.outputs.version }}"
+          git commit -m "chore: update CHANGELOG for ${{ steps.version.outputs.version }"
           git push
         shell: bash

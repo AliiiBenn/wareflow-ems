@@ -1,16 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 """
-PyInstaller spec file for Wareflow Employee Management System (GUI version).
+PyInstaller spec file for Wareflow Employee Management System (CLI version).
 
-This spec file defines how to bundle the GUI application into a standalone
+This spec file defines how to bundle the CLI application into a standalone
 executable. It includes all necessary dependencies, data files, and configuration.
 
 Usage:
-    pyinstaller build/wems.spec
+    pyinstaller build/wems-cli.spec
 
 Or via build script:
-    python build/build.py
-    uv run pyinstaller build/wems.spec
+    python build/build.py --cli
+    uv run pyinstaller build/wems-cli.spec
 """
 
 import os
@@ -22,13 +22,15 @@ block_cipher = None
 ROOT_DIR = Path(SPECPATH).parent
 SRC_DIR = ROOT_DIR / "src"
 
-# Collect all hidden imports for CustomTkinter and dependencies
+# Collect all hidden imports for CLI and dependencies
 hiddenimports = [
-    # GUI Framework
-    "customtkinter",
-    "tkinter",
-    "PIL",
-    "PIL._tkinter_finder",
+    # CLI Framework
+    "typer",
+    "rich",
+    "rich.console",
+    "rich.progress",
+    "rich.table",
+    "tabulate",
 
     # Database
     "peewee",
@@ -61,7 +63,13 @@ hiddenimports = [
     # Bootstrapper
     "bootstrapper.update_checker",
 
-    # CLI modules (for updates)
+    # All CLI modules
+    "cli.employee",
+    "cli.caces",
+    "cli.medical",
+    "cli.training",
+    "cli.report",
+    "cli.lock",
     "cli.update",
     "cli.upgrade",
     "cli.rollback",
@@ -70,12 +78,14 @@ hiddenimports = [
     "requests",
     "packaging",
     "packaging.version",
+
+    # Questionary for interactive prompts
+    "questionary",
 ]
 
 # Data files to include
 datas = [
-    # Include all source modules
-    (str(SRC_DIR / "ui_ctk"), "ui_ctk"),
+    # Include all source modules (except GUI)
     (str(SRC_DIR / "utils"), "utils"),
     (str(SRC_DIR / "state"), "state"),
     (str(SRC_DIR / "controllers"), "controllers"),
@@ -86,7 +96,17 @@ binaries_excludes = []
 
 # Import exclusions (reduce file size)
 excludes = [
-    # Scientific computing (not needed)
+    # GUI frameworks (not needed for CLI)
+    "customtkinter",
+    "tkinter",
+    "PIL",
+    "PIL._tkinter_finder",
+    "PIL._imaging",
+
+    # GUI modules
+    "ui_ctk",
+
+    # Scientific computing
     "matplotlib",
     "numpy",
     "pandas",
@@ -106,7 +126,7 @@ excludes = [
 
 # Analysis
 a = Analysis(
-    [str(SRC_DIR / "main.py")],
+    [str(SRC_DIR / "cli_main.py")],
     pathex=[str(ROOT_DIR)],
     binaries=[],
     datas=datas,
@@ -129,12 +149,12 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="wems",
+    name="wems-cli",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,  # GUI application - no console window
+    console=True,  # CLI application - show console
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -152,5 +172,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="wems",
+    name="wems-cli",
 )
