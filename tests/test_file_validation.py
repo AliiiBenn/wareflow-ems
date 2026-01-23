@@ -6,7 +6,7 @@ proper validation of file uploads.
 
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -15,6 +15,11 @@ from utils.file_validation import (
     sanitize_file_path,
     is_safe_filename,
     validate_and_copy_document,
+    validate_magic_number,
+    validate_pdf_structure,
+    validate_filename_characters,
+    validate_file_not_empty,
+    validate_comprehensive,
     FileValidationError,
 )
 
@@ -421,3 +426,404 @@ class TestValidateAndCopyDocument:
             assert success is True
             assert dest_dir.exists()
             assert Path(secure_path).parent == dest_dir.resolve()
+
+
+class TestValidateMagicNumber:
+    """Test suite for validate_magic_number function."""
+
+    def test_valid_pdf_magic_number(self, db):
+        """Test that valid PDF magic numbers are accepted."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a minimal valid PDF file
+            pdf_file = Path(tmpdir) / "test.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n%%EOF")
+
+        with patch('utils.file_validation.magic.Magic') as mock_magic:
+            mock_mime = MagicMock()
+            mock_mime.from_file.return_value = 'application/pdf'
+            mock_magic.Magic.return_value = mock_mime
+
+            is_valid, error = validate_magic_number(pdf_file)
+
+            assert is_valid is True
+            assert error is None
+
+    def test_exe_disguised_as_pdf(self, db):
+        """Test that .exe file with .pdf extension is rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            exe_file = Path(tmpdir) / "malicious.pdf"
+            exe_file.write_bytes(b"MZ\x90\x00")  # PE executable magic number
+
+        with patch('utils.file_validation.magic.Magic') as mock_magic:
+            mock_mime = MagicMock()
+            mock_mime.from_file.return_value = 'application/x-dosexec'
+            mock_magic.Magic.return_value = mock_mime
+
+            is_valid, error = validate_magic_number(exe_file)
+
+            assert is_valid is False
+            assert "content type" in error.lower()
+
+    def test_magic_library_unavailable(self, db):
+        """Test graceful degradation when python-magic is not available."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "test.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.magic.Magic', side_effect=ImportError):
+            is_valid, error = validate_magic_number(pdf_file)
+
+            # Should pass with warning (graceful degradation)
+            assert is_valid is True
+
+    def test_expected_mime_validation(self, db):
+        """Test that MIME type matches expected value."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "test.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.magic.Magic') as mock_magic:
+            mock_mime = MagicMock()
+            mock_mime.from_file.return_value = 'application/pdf'
+            mock_magic.Magic.return_value = mock_mime
+
+            is_valid, error = validate_magic_number(
+                pdf_file,
+                expected_mime='application/pdf'
+            )
+
+            assert is_valid is True
+
+    def test_mime_mismatch_detected(self, db):
+        """Test that MIME type mismatch is detected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "test.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.magic.Magic') as mock_magic:
+            mock_mime = MagicMock()
+            mock_mime.from_file.return_value = 'application/x-dosexec'
+            mock_magic.Magic.return_value = mock_mime
+
+            is_valid, error = validate_magic_number(
+                pdf_file,
+                expected_mime='application/pdf'
+            )
+
+            assert is_valid is False
+            assert "does not match" in error.lower()
+
+
+class TestValidatePdfStructure:
+    """Test suite for validate_pdf_structure function."""
+
+    def test_valid_pdf_structure(self, db):
+        """Test that valid PDF structure passes validation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "valid.pdf"
+            # Create a minimal valid PDF
+            pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\n%%EOF"
+            pdf_file.write_bytes(pdf_content)
+
+        with patch('utils.file_validation.pypdf.PdfReader') as mock_reader:
+            mock_pdf = MagicMock()
+            mock_pdf.pages = [MagicMock()]  # Has at least one page
+            mock_pdf.is_encrypted = False
+            mock_reader.return_value = mock_pdf
+
+            is_valid, error = validate_pdf_structure(pdf_file)
+
+            assert is_valid is True
+            assert error is None
+
+    def test_encrypted_pdf_rejected(self, db):
+        """Test that encrypted PDFs are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "encrypted.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.pypdf.PdfReader') as mock_reader:
+            mock_pdf = MagicMock()
+            mock_pdf.is_encrypted = True
+            mock_reader.return_value = mock_pdf
+
+            is_valid, error = validate_pdf_structure(pdf_file)
+
+            assert is_valid is False
+            assert "encrypted" in error.lower()
+
+    def test_empty_pdf_rejected(self, db):
+        """Test that PDFs with no pages are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "empty.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.pypdf.PdfReader') as mock_reader:
+            mock_pdf = MagicMock()
+            mock_pdf.pages = []  # No pages
+            mock_pdf.is_encrypted = False
+            mock_reader.return_value = mock_pdf
+
+            is_valid, error = validate_pdf_structure(pdf_file)
+
+            assert is_valid is False
+            assert "no pages" in error.lower()
+
+    def test_pypdf_unavailable(self, db):
+        """Test graceful degradation when pypdf is not available."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "test.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.pypdf.PdfReader', side_effect=ImportError):
+            is_valid, error = validate_pdf_structure(pdf_file)
+
+            # Should pass with warning (graceful degradation)
+            assert is_valid is True
+
+    def test_corrupted_pdf_detected(self, db):
+        """Test that corrupted PDFs are detected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "corrupted.pdf"
+            pdf_file.write_bytes(b"This is not a PDF")
+
+        with patch('utils.file_validation.pypdf.PdfReader') as mock_reader:
+            mock_reader.side_effect = Exception("Invalid PDF structure")
+
+            is_valid, error = validate_pdf_structure(pdf_file)
+
+            assert is_valid is False
+            assert "invalid pdf" in error.lower()
+
+
+class TestValidateFilenameCharacters:
+    """Test suite for validate_filename_characters function."""
+
+    def test_safe_filenames_accepted(self):
+        """Test that safe filenames are accepted."""
+        safe_names = [
+            "document.pdf",
+            "certificate-2024.pdf",
+            "image_v1.png",
+            "CACES_R489.pdf",
+        ]
+
+        for name in safe_names:
+            is_valid, error = validate_filename_characters(name)
+            assert is_valid is True, f"Should accept: {name}"
+            assert error is None
+
+    def test_null_bytes_rejected(self):
+        """Test that null bytes are rejected."""
+        is_valid, error = validate_filename_characters("file\x00.pdf")
+
+        assert is_valid is False
+        assert "null byte" in error.lower()
+
+    def test_suspicious_characters_rejected(self):
+        """Test that suspicious characters are rejected."""
+        suspicious_names = [
+            "file<.pdf",
+            "file>.pdf",
+            "file:.pdf",
+            "file|.pdf",
+            'file".pdf',
+            "file*.pdf",
+            "file?.pdf",
+        ]
+
+        for name in suspicious_names:
+            is_valid, error = validate_filename_characters(name)
+            assert is_valid is False, f"Should reject: {name}"
+            assert "invalid characters" in error.lower() or "contains" in error.lower()
+
+    def test_excessively_long_filename_rejected(self):
+        """Test that excessively long filenames are rejected."""
+        long_name = "a" * 256 + ".pdf"
+
+        is_valid, error = validate_filename_characters(long_name)
+
+        assert is_valid is False
+        assert "too long" in error.lower()
+
+    def test_empty_filename_rejected(self):
+        """Test that empty filenames are rejected."""
+        is_valid, error = validate_filename_characters("")
+
+        assert is_valid is False
+        assert "empty" in error.lower()
+
+    def test_max_length_accepted(self):
+        """Test that filenames at max length (255) are accepted."""
+        # Create a filename that's exactly 255 characters
+        name = "a" * 251 + ".pdf"  # 251 + 4 = 255
+
+        is_valid, error = validate_filename_characters(name)
+
+        assert is_valid is True
+        assert error is None
+
+
+class TestValidateFileNotEmpty:
+    """Test suite for validate_file_not_empty function."""
+
+    def test_non_empty_file_accepted(self, db):
+        """Test that non-empty files are accepted."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "test.pdf"
+            file_path.write_bytes(b"some content")
+
+            is_valid, error = validate_file_not_empty(file_path)
+
+            assert is_valid is True
+            assert error is None
+
+    def test_empty_file_rejected(self, db):
+        """Test that empty files are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            file_path = Path(tmpdir) / "empty.pdf"
+            file_path.write_bytes(b"")
+
+            is_valid, error = validate_file_not_empty(file_path)
+
+            assert is_valid is False
+            assert "empty" in error.lower()
+
+
+class TestValidateComprehensive:
+    """Test suite for validate_comprehensive function."""
+
+    def test_valid_pdf_passes_all_checks(self, db):
+        """Test that valid PDF passes all comprehensive checks."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "certificate.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4\n%%EOF")
+
+        with patch('utils.file_validation.validate_magic_number') as mock_magic, \
+             patch('utils.file_validation.validate_pdf_structure') as mock_pdf:
+            mock_magic.return_value = (True, None)
+            mock_pdf.return_value = (True, None)
+
+            is_valid, error = validate_comprehensive(str(pdf_file))
+
+            assert is_valid is True
+            assert error is None
+
+    def test_invalid_extension_rejected(self, db):
+        """Test that files with invalid extensions are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            exe_file = Path(tmpdir) / "malicious.exe"
+            exe_file.write_bytes(b"content")
+
+            is_valid, error = validate_comprehensive(
+                str(exe_file),
+                allowed_extensions={".pdf"}
+            )
+
+            assert is_valid is False
+            assert "invalid file type" in error.lower() or "allowed" in error.lower()
+
+    def test_magic_number_failure_rejected(self, db):
+        """Test that magic number validation failure rejects file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "spoofed.pdf"
+            pdf_file.write_bytes(b"not a pdf")
+
+        with patch('utils.file_validation.validate_magic_number') as mock_magic:
+            mock_magic.return_value = (False, "Invalid content type")
+
+            is_valid, error = validate_comprehensive(str(pdf_file))
+
+            assert is_valid is False
+            assert "content type" in error.lower()
+
+    def test_pdf_structure_failure_rejected(self, db):
+        """Test that PDF structure validation failure rejects file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "corrupted.pdf"
+            pdf_file.write_bytes(b"%PDF-1.4")
+
+        with patch('utils.file_validation.validate_magic_number') as mock_magic, \
+             patch('utils.file_validation.validate_pdf_structure') as mock_pdf:
+            mock_magic.return_value = (True, None)
+            mock_pdf.return_value = (False, "PDF has no pages")
+
+            is_valid, error = validate_comprehensive(str(pdf_file))
+
+            assert is_valid is False
+            assert "no pages" in error.lower()
+
+    def test_empty_file_rejected(self, db):
+        """Test that empty files are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            empty_file = Path(tmpdir) / "empty.pdf"
+            empty_file.write_bytes(b"")
+
+            is_valid, error = validate_comprehensive(str(empty_file))
+
+            assert is_valid is False
+            assert "empty" in error.lower()
+
+    def test_invalid_filename_rejected(self, db):
+        """Test that files with invalid filenames are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            invalid_file = Path(tmpdir) / "file\x00.pdf"
+            invalid_file.write_bytes(b"content")
+
+            is_valid, error = validate_comprehensive(str(invalid_file))
+
+            assert is_valid is False
+            assert "null byte" in error.lower()
+
+    def test_oversized_file_rejected(self, db):
+        """Test that oversized files are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            large_file = Path(tmpdir) / "large.pdf"
+            large_file.write_bytes(b"x" * (2 * 1024 * 1024))  # 2MB
+
+            is_valid, error = validate_comprehensive(
+                str(large_file),
+                max_size_mb=1
+            )
+
+            assert is_valid is False
+            assert "too large" in error.lower()
+
+    def test_magic_validation_can_be_disabled(self, db):
+        """Test that magic validation can be disabled."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            pdf_file = Path(tmpdir) / "test.pdf"
+            pdf_file.write_bytes(b"not a real pdf")
+
+        with patch('utils.file_validation.validate_pdf_structure') as mock_pdf:
+            mock_pdf.return_value = (True, None)
+
+            is_valid, error = validate_comprehensive(
+                str(pdf_file),
+                validate_magic=False,
+                validate_pdf=False
+            )
+
+            # Should pass without magic validation
+            assert is_valid is True
+
+    def test_nonexistent_file_rejected(self, db):
+        """Test that nonexistent files are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nonexistent = Path(tmpdir) / "does_not_exist.pdf"
+
+            is_valid, error = validate_comprehensive(str(nonexistent))
+
+            assert is_valid is False
+            assert "does not exist" in error.lower()
+
+    def test_directory_rejected(self, db):
+        """Test that directories are rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            dir_path = Path(tmpdir) / "directory"
+            dir_path.mkdir()
+
+            is_valid, error = validate_comprehensive(str(dir_path))
+
+            assert is_valid is False
+            assert "must be a file" in error.lower()
