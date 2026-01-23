@@ -4,11 +4,14 @@ This test module covers the interactive setup wizard that helps
 users configure Wareflow EMS without manual file editing.
 """
 
-import tempfile
+import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from bootstrapper import wizard
 from utils import config
