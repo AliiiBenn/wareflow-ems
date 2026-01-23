@@ -18,8 +18,9 @@ from rich.panel import Panel
 from rich.table import Table
 
 from bootstrapper.wizard import run_setup_wizard
-from cli.utils import console as cli_console
 from utils import config
+
+console = Console()
 
 app = typer.Typer(
     help="Configuration management commands",

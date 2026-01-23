@@ -5,6 +5,6 @@ Wareflow EMS, including the interactive setup wizard and
 first-run configuration.
 """
 
-from bootstrapper import update_checker, wizard
+from . import update_checker, wizard
 
 __all__ = ["update_checker", "wizard"]
