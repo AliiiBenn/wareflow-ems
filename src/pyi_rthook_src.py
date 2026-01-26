@@ -8,34 +8,30 @@ import os
 from pathlib import Path
 
 # When running from PyInstaller bundle, src is not in path by default
-# We need to add it early, before any imports happen
+# We need to add the parent directory to sys.path so 'from src.xxx' works
 if getattr(sys, 'frozen', False):
-    # Get the temporary extraction directory
-    # PyInstaller extracts to a temp folder when running
-    # We need to find src/ within the extraction
+    # Get the directory containing src (this should be added to sys.path)
     if '_MEIPASS' in os.environ:
         # PyInstaller has extracted to temp dir
         extraction_dir = Path(os.environ['_MEIPASS'])
-        src_dir = extraction_dir / "src"
-    else:
-        # Development mode or testing - should not happen in frozen app
-        exe_dir = Path(sys.executable).parent.resolve()
-        src_dir = exe_dir / "src"
 
-    if src_dir.exists():
-        sys.path.insert(0, str(src_dir))
-        # Also add parent dir in case we need other top-level modules
-        sys.path.insert(1, str(src_dir.parent))
-    else:
-        # Fallback: try to find src directory by searching upward
-        # This handles cases where the structure is different
-        if '_MEIPASS' in os.environ:
-            current = Path(os.environ['_MEIPASS'])
+        # The extraction_dir should already contain the src directory
+        # We need to add extraction_dir itself to sys.path
+        if (extraction_dir / "src").exists():
+            sys.path.insert(0, str(extraction_dir))
         else:
-            current = Path(sys.executable).parent.resolve()
+            # Fallback: try finding src parent
+            for _ in range(3):
+                if (extraction_dir / "src").exists():
+                    sys.path.insert(0, str(extraction_dir))
+                    break
+                extraction_dir = extraction_dir.parent
+    else:
+        # Development mode or testing
+        exe_dir = Path(sys.executable).parent.resolve()
 
-        for _ in range(3):  # Search up to 3 levels
-            if (current / "src").exists():
-                sys.path.insert(0, str(current / "src"))
+        # Look for src directory and add its parent to sys.path
+        for check_dir in [exe_dir, exe_dir.parent, exe_dir.parent.parent]:
+            if (check_dir / "src").exists():
+                sys.path.insert(0, str(check_dir))
                 break
-            current = current.parent if current.parent != current else current

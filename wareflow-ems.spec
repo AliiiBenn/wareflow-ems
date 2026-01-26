@@ -6,11 +6,16 @@ It packages all dependencies, data files, and resources into a single file.
 """
 
 import os
+from pathlib import Path
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+# Get project root directory
+project_root = Path(__file__).parent.resolve()
 
 # Bundle all external data files
 datas = [
     ('build/assets/icon.ico', '.'),  # Application icon
+    ('src', 'src'),  # Include entire src directory
 ]
 
 # Collect all data files from packages
@@ -49,7 +54,7 @@ block_cipher = None
 
 a = Analysis(
     ['src/main_exe.py'],  # Entry point for PyInstaller
-    pathex=[],
+    pathex=[str(project_root)],  # Add project root to path so PyInstaller can find src package
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
