@@ -5,7 +5,7 @@ from typing import Callable, Optional
 
 import customtkinter as ctk
 
-from database.models import Employee
+from employee.models import Employee
 from ui_ctk.dialogs.export_dialog import ExportDialog
 
 
