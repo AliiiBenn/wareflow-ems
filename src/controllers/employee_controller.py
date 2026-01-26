@@ -9,6 +9,7 @@ from employee import queries, calculations
 from peewee import prefetch
 
 from utils.validation import InputValidator, ValidationError
+from utils.undo_manager import record_create
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +179,9 @@ class EmployeeController:
 
             # Create employee with validated data
             employee = Employee.create(**validated_data)
+
+            # Record for undo
+            record_create(employee, f"Create employee {employee.full_name}", "employee")
 
             logger.info(f"Employee created: {employee.full_name} ({employee.external_id})")
             return employee

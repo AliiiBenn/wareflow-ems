@@ -11,6 +11,7 @@ import customtkinter as ctk
 from employee.models import Caces, Employee, MedicalVisit, OnlineTraining
 from ui_ctk.constants import BTN_BACK
 from ui_ctk.views.base_view import BaseView
+from utils.undo_manager import record_create, record_delete
 
 
 class TrashView(BaseView):
@@ -205,8 +206,24 @@ class TrashView(BaseView):
             item_type: Type of item
         """
         try:
+            # Get description before restoring
+            if item_type == "employee":
+                description = f"{item.full_name}"
+            elif item_type == "caces":
+                description = f"CACES {item.kind}"
+            elif item_type == "visit":
+                description = f"Medical visit ({item.visit_type})"
+            elif item_type == "training":
+                description = f"Training '{item.title}'"
+            else:
+                description = f"{item_type}"
+
             # Restore the item
             item.restore()
+
+            # Record for undo (restore is like a create from main list perspective)
+            # The undo will soft delete it again
+            record_create(item, f"Restore {description} from trash", item_type)
 
             print(f"[OK] Restored {item_type}: {item}")
 
