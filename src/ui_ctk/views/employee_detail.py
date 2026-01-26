@@ -373,10 +373,19 @@ class EmployeeDetailView(BaseView):
         try:
             import tkinter.messagebox as messagebox
 
-            # Get related counts for warning
-            n_caces = self.employee.caces.where(Caces.deleted_at.is_null(True)).count()
-            n_visits = self.employee.medical_visits.where(MedicalVisit.deleted_at.is_null(True)).count()
-            n_trainings = self.employee.online_trainings.where(OnlineTraining.deleted_at.is_null(True)).count()
+            # Get related counts for warning (non-deleted only)
+            n_caces = Caces.select().where(
+                (Caces.employee == self.employee) &
+                (Caces.deleted_at.is_null())
+            ).count()
+            n_visits = MedicalVisit.select().where(
+                (MedicalVisit.employee == self.employee) &
+                (MedicalVisit.deleted_at.is_null())
+            ).count()
+            n_trainings = OnlineTraining.select().where(
+                (OnlineTraining.employee == self.employee) &
+                (OnlineTraining.deleted_at.is_null())
+            ).count()
 
             # Confirm deletion with details
             confirm = messagebox.askyesno(
