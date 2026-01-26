@@ -48,7 +48,7 @@ excludes = [
 block_cipher = None
 
 a = Analysis(
-    ['src/main.py'],  # Entry point
+    ['src/main_exe.py'],  # Entry point for PyInstaller
     pathex=[],
     binaries=[],
     datas=datas,
