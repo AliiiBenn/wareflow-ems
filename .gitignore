@@ -29,6 +29,7 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
+!wareflow-ems.spec  # Keep main build spec file
 
 # Unit test / coverage reports
 htmlcov/
