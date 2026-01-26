@@ -96,19 +96,22 @@ class EmployeeController:
         Get list of all employees for list view.
 
         Returns:
-            List of Employee objects
+            List of Employee objects (excluding soft-deleted)
         """
-        return list(Employee.select().order_by(Employee.last_name, Employee.first_name))
+        return list(Employee.select()
+                    .where(Employee.deleted_at.is_null())  # Exclude soft-deleted
+                    .order_by(Employee.last_name, Employee.first_name))
 
     def get_active_employees(self) -> list:
         """
         Get list of active employees.
 
         Returns:
-            List of active Employee objects
+            List of active Employee objects (excluding soft-deleted)
         """
         return list(Employee.select()
-                    .where(Employee.current_status == 'active')
+                    .where((Employee.current_status == 'active') &
+                           (Employee.deleted_at.is_null()))  # Also exclude soft-deleted
                     .order_by(Employee.last_name, Employee.first_name))
 
     def get_employees_with_relations(self) -> List[Employee]:
@@ -128,6 +131,7 @@ class EmployeeController:
         """
         employees = list(Employee
                          .select()
+                         .where(Employee.deleted_at.is_null())  # Exclude soft-deleted
                          .order_by(Employee.last_name, Employee.first_name)
                          .prefetch(Caces, MedicalVisit, OnlineTraining))
         return employees
@@ -145,7 +149,8 @@ class EmployeeController:
         """
         employees = list(Employee
                          .select()
-                         .where(Employee.current_status == 'active')
+                         .where((Employee.current_status == 'active') &
+                                (Employee.deleted_at.is_null()))  # Also exclude soft-deleted
                          .prefetch(Caces, MedicalVisit, OnlineTraining)
                          .order_by(Employee.last_name, Employee.first_name))
         return employees
