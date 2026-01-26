@@ -156,12 +156,12 @@ def delete(
             typer.echo(f"⚠️  Pour supprimer le CACES {caces.kind}, utilisez --yes")
             raise typer.Exit(1)
 
-    # Delete CACES
+    # Soft delete CACES
     try:
         with db.atomic():
-            caces.delete_instance()
+            caces.soft_delete(reason="Deleted by CLI", deleted_by=None)
 
-        typer.echo(f"✅ CACES {caces_id} supprimé")
+        typer.echo(f"✅ CACES {caces_id} déplacé vers la corbeille")
 
     except Exception as e:
         typer.echo(f"❌ Erreur lors de la suppression: {e}", err=True)

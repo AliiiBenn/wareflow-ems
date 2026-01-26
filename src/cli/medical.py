@@ -183,12 +183,12 @@ def delete(
             typer.echo(f"⚠️  Pour supprimer la visite, utilisez --yes")
             raise typer.Exit(1)
 
-    # Delete visit
+    # Soft delete visit
     try:
         with db.atomic():
-            visit.delete_instance()
+            visit.soft_delete(reason="Deleted by CLI", deleted_by=None)
 
-        typer.echo(f"✅ Visite {visit_id} supprimée")
+        typer.echo(f"✅ Visite {visit_id} déplacée vers la corbeille")
 
     except Exception as e:
         typer.echo(f"❌ Erreur lors de la suppression: {e}", err=True)

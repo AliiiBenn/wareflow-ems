@@ -46,6 +46,11 @@ class Employee(Model):
     created_at = DateTimeField(default=datetime.now)
     updated_at = DateTimeField(default=datetime.now)
 
+    # Soft Delete
+    deleted_at = DateTimeField(null=True, index=True)
+    deleted_by = CharField(null=True)  # Username who deleted (when auth is added)
+    deletion_reason = TextField(null=True)
+
     class Meta:
         database = database
         table_name = "employees"
@@ -72,7 +77,22 @@ class Employee(Model):
         """Convenience boolean for active status."""
         return self.current_status == EmployeeStatus.ACTIVE
 
+    @property
+    def is_deleted(self) -> bool:
+        """Check if employee is soft-deleted."""
+        return self.deleted_at is not None
+
     # ========== CLASS METHODS (QUERIES) ==========
+
+    @classmethod
+    def without_deleted(cls):
+        """Get all employees excluding soft-deleted ones."""
+        return cls.select().where(cls.deleted_at.is_null(True))
+
+    @classmethod
+    def deleted(cls):
+        """Get all soft-deleted employees."""
+        return cls.select().where(cls.deleted_at.is_null(False))
 
     @classmethod
     def active(cls):
@@ -103,6 +123,26 @@ class Employee(Model):
     # will be implemented in employee/queries.py to avoid circular imports
 
     # ========== INSTANCE METHODS ==========
+
+    def soft_delete(self, reason: str = None, deleted_by: str = None):
+        """
+        Mark employee as deleted (soft delete).
+
+        Args:
+            reason: Optional reason for deletion
+            deleted_by: Optional username who performed the deletion
+        """
+        self.deleted_at = datetime.now()
+        self.deletion_reason = reason
+        self.deleted_by = deleted_by
+        self.save(only=[Employee.deleted_at, Employee.deletion_reason, Employee.deleted_by])
+
+    def restore(self):
+        """Restore a soft-deleted employee."""
+        self.deleted_at = None
+        self.deletion_reason = None
+        self.deleted_by = None
+        self.save(only=[Employee.deleted_at, Employee.deletion_reason, Employee.deleted_by])
 
     def add_caces(self, kind: str, completion_date: date, document_path: str):
         """Create a CACES certification for this employee."""
@@ -198,6 +238,11 @@ class Caces(Model):
     # Metadata
     created_at = DateTimeField(default=datetime.now)
 
+    # Soft Delete
+    deleted_at = DateTimeField(null=True, index=True)
+    deleted_by = CharField(null=True)
+    deletion_reason = TextField(null=True)
+
     class Meta:
         database = database
         table_name = "caces"
@@ -206,6 +251,11 @@ class Caces(Model):
         )
 
     # ========== COMPUTED PROPERTIES ==========
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if CACES is soft-deleted."""
+        return self.deleted_at is not None
 
     @property
     def is_expired(self) -> bool:
@@ -287,6 +337,38 @@ class Caces(Model):
         """Get certifications by type."""
         return cls.select().where(cls.kind == kind)
 
+    @classmethod
+    def without_deleted(cls):
+        """Get all CACES excluding soft-deleted ones."""
+        return cls.select().where(cls.deleted_at.is_null(True))
+
+    @classmethod
+    def deleted(cls):
+        """Get all soft-deleted CACES."""
+        return cls.select().where(cls.deleted_at.is_null(False))
+
+    # ========== INSTANCE METHODS ==========
+
+    def soft_delete(self, reason: str = None, deleted_by: str = None):
+        """
+        Mark CACES as deleted (soft delete).
+
+        Args:
+            reason: Optional reason for deletion
+            deleted_by: Optional username who performed the deletion
+        """
+        self.deleted_at = datetime.now()
+        self.deletion_reason = reason
+        self.deleted_by = deleted_by
+        self.save(only=[Caces.deleted_at, Caces.deletion_reason, Caces.deleted_by])
+
+    def restore(self):
+        """Restore a soft-deleted CACES."""
+        self.deleted_at = None
+        self.deletion_reason = None
+        self.deleted_by = None
+        self.save(only=[Caces.deleted_at, Caces.deletion_reason, Caces.deleted_by])
+
     # ========== HOOKS ==========
 
     def before_save(self):
@@ -337,12 +419,22 @@ class MedicalVisit(Model):
     # Metadata
     created_at = DateTimeField(default=datetime.now)
 
+    # Soft Delete
+    deleted_at = DateTimeField(null=True, index=True)
+    deleted_by = CharField(null=True)
+    deletion_reason = TextField(null=True)
+
     class Meta:
         database = database
         table_name = "medical_visits"
         indexes = ((("employee", "expiration_date"), False),)
 
     # ========== COMPUTED PROPERTIES ==========
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if medical visit is soft-deleted."""
+        return self.deleted_at is not None
 
     @property
     def is_expired(self) -> bool:
@@ -409,6 +501,38 @@ class MedicalVisit(Model):
         """Get employees with unfit medical visits."""
         return Employee.select(Employee, cls).join(cls).where(cls.result == "unfit")
 
+    @classmethod
+    def without_deleted(cls):
+        """Get all medical visits excluding soft-deleted ones."""
+        return cls.select().where(cls.deleted_at.is_null(True))
+
+    @classmethod
+    def deleted(cls):
+        """Get all soft-deleted medical visits."""
+        return cls.select().where(cls.deleted_at.is_null(False))
+
+    # ========== INSTANCE METHODS ==========
+
+    def soft_delete(self, reason: str = None, deleted_by: str = None):
+        """
+        Mark medical visit as deleted (soft delete).
+
+        Args:
+            reason: Optional reason for deletion
+            deleted_by: Optional username who performed the deletion
+        """
+        self.deleted_at = datetime.now()
+        self.deletion_reason = reason
+        self.deleted_by = deleted_by
+        self.save(only=[MedicalVisit.deleted_at, MedicalVisit.deletion_reason, MedicalVisit.deleted_by])
+
+    def restore(self):
+        """Restore a soft-deleted medical visit."""
+        self.deleted_at = None
+        self.deletion_reason = None
+        self.deleted_by = None
+        self.save(only=[MedicalVisit.deleted_at, MedicalVisit.deletion_reason, MedicalVisit.deleted_by])
+
     # ========== HOOKS ==========
 
     def before_save(self):
@@ -459,12 +583,22 @@ class OnlineTraining(Model):
     # Metadata
     created_at = DateTimeField(default=datetime.now)
 
+    # Soft Delete
+    deleted_at = DateTimeField(null=True, index=True)
+    deleted_by = CharField(null=True)
+    deletion_reason = TextField(null=True)
+
     class Meta:
         database = database
         table_name = "online_trainings"
         indexes = ((("employee", "expiration_date"), False),)
 
     # ========== COMPUTED PROPERTIES ==========
+
+    @property
+    def is_deleted(self) -> bool:
+        """Check if training is soft-deleted."""
+        return self.deleted_at is not None
 
     @property
     def expires(self) -> bool:
@@ -545,6 +679,38 @@ class OnlineTraining(Model):
     def permanent(cls):
         """Get all permanent (non-expiring) trainings."""
         return cls.select().where(cls.validity_months.is_null(True))
+
+    @classmethod
+    def without_deleted(cls):
+        """Get all trainings excluding soft-deleted ones."""
+        return cls.select().where(cls.deleted_at.is_null(True))
+
+    @classmethod
+    def deleted(cls):
+        """Get all soft-deleted trainings."""
+        return cls.select().where(cls.deleted_at.is_null(False))
+
+    # ========== INSTANCE METHODS ==========
+
+    def soft_delete(self, reason: str = None, deleted_by: str = None):
+        """
+        Mark training as deleted (soft delete).
+
+        Args:
+            reason: Optional reason for deletion
+            deleted_by: Optional username who performed the deletion
+        """
+        self.deleted_at = datetime.now()
+        self.deletion_reason = reason
+        self.deleted_by = deleted_by
+        self.save(only=[OnlineTraining.deleted_at, OnlineTraining.deletion_reason, OnlineTraining.deleted_by])
+
+    def restore(self):
+        """Restore a soft-deleted training."""
+        self.deleted_at = None
+        self.deletion_reason = None
+        self.deleted_by = None
+        self.save(only=[OnlineTraining.deleted_at, OnlineTraining.deletion_reason, OnlineTraining.deleted_by])
 
     # ========== HOOKS ==========
 

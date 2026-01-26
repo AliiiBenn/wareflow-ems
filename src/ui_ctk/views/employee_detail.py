@@ -4,7 +4,8 @@ from datetime import date
 
 import customtkinter as ctk
 
-from employee.models import Caces, Employee, MedicalVisit
+from employee.models import Caces, Employee, MedicalVisit, OnlineTraining
+from utils.undo_manager import record_delete
 from ui_ctk.constants import (
     BTN_ADD,
     BTN_BACK,
@@ -368,20 +369,35 @@ class EmployeeDetailView(BaseView):
             self.show_error(f"Failed to edit employee: {e}")
 
     def delete_employee(self):
-        """Delete employee after confirmation."""
+        """Soft delete employee after confirmation."""
         try:
             import tkinter.messagebox as messagebox
 
-            # Confirm deletion
+            # Get related counts for warning
+            n_caces = self.employee.caces.where(Caces.deleted_at.is_null(True)).count()
+            n_visits = self.employee.medical_visits.where(MedicalVisit.deleted_at.is_null(True)).count()
+            n_trainings = self.employee.online_trainings.where(OnlineTraining.deleted_at.is_null(True)).count()
+
+            # Confirm deletion with details
             confirm = messagebox.askyesno(
-                "Confirmer la suppression", f"{CONFIRM_DELETE_EMPLOYEE}\n\n{CONFIRM_DELETE_WARNING}"
+                "Move to Trash",
+                f"Move {self.employee.full_name} to trash?\n\n"
+                f"This will move the employee to the trash (not permanent delete).\n\n"
+                f"Related data:\n"
+                f"• CACES: {n_caces}\n"
+                f"• Medical visits: {n_visits}\n"
+                f"• Trainings: {n_trainings}\n\n"
+                f"You can restore the employee from the trash.",
             )
 
             if confirm:
-                # Delete employee
-                self.employee.delete_instance()
+                # Soft delete employee
+                self.employee.soft_delete(reason="Deleted by user", deleted_by=None)
 
-                print(f"[OK] Employee deleted: {self.employee.full_name}")
+                # Record for undo
+                record_delete(self.employee, f"Delete employee {self.employee.full_name}", "employee")
+
+                print(f"[OK] Employee moved to trash: {self.employee.full_name}")
 
                 # Go back to list
                 self.go_back()
@@ -441,19 +457,26 @@ class EmployeeDetailView(BaseView):
             self.show_error(f"Failed to edit CACES: {e}")
 
     def delete_caces(self, caces: Caces):
-        """Delete CACES certification."""
+        """Soft delete CACES certification."""
         try:
             import tkinter.messagebox as messagebox
 
             # Confirm deletion
             confirm = messagebox.askyesno(
-                "Confirm Deletion", f"{CONFIRM_DELETE_CACES}\n\nType: {caces.kind}\nEmployee: {self.employee.full_name}"
+                "Move to Trash",
+                f"Move CACES {caces.kind} to trash?\n\n"
+                f"This will move the certification to the trash (not permanent delete).\n\n"
+                f"Employee: {self.employee.full_name}",
             )
 
             if confirm:
-                # Delete CACES
-                caces.delete_instance()
-                print(f"[OK] CACES deleted: {caces.kind}")
+                # Soft delete CACES
+                caces.soft_delete(reason="Deleted by user", deleted_by=None)
+
+                # Record for undo
+                record_delete(caces, f"Delete CACES {caces.kind}", "caces")
+
+                print(f"[OK] CACES moved to trash: {caces.kind}")
 
                 # Refresh view
                 self.refresh_view()
@@ -495,7 +518,7 @@ class EmployeeDetailView(BaseView):
             self.show_error(f"Failed to edit medical visit: {e}")
 
     def delete_medical_visit(self, visit: MedicalVisit):
-        """Delete medical visit."""
+        """Soft delete medical visit."""
         try:
             import tkinter.messagebox as messagebox
 
@@ -504,14 +527,20 @@ class EmployeeDetailView(BaseView):
 
             # Confirm deletion
             confirm = messagebox.askyesno(
-                "Confirm Deletion",
-                f"{CONFIRM_DELETE_VISIT}\n\nType: {visit_type_label}\nDate: {visit.visit_date.strftime(DATE_FORMAT)}\nEmployee: {self.employee.full_name}",
+                "Move to Trash",
+                f"Move medical visit to trash?\n\n"
+                f"This will move the visit to the trash (not permanent delete).\n\n"
+                f"Type: {visit_type_label}\nDate: {visit.visit_date.strftime(DATE_FORMAT)}\nEmployee: {self.employee.full_name}",
             )
 
             if confirm:
-                # Delete visit
-                visit.delete_instance()
-                print(f"[OK] Medical visit deleted: {visit_type_label}")
+                # Soft delete visit
+                visit.soft_delete(reason="Deleted by user", deleted_by=None)
+
+                # Record for undo
+                record_delete(visit, f"Delete medical visit ({visit_type_label})", "medical_visit")
+
+                print(f"[OK] Medical visit moved to trash: {visit_type_label}")
 
                 # Refresh view
                 self.refresh_view()

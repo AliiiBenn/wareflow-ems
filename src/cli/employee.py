@@ -234,13 +234,12 @@ def delete(
             typer.echo(f"⚠️  Pour supprimer {employee.full_name} ({employee_id}), utilisez --yes")
             raise typer.Exit(1)
 
-    # Delete employee
+    # Soft delete employee
     try:
         with db.atomic():
-            # Cascade delete will handle related records
-            employee.delete_instance()
+            employee.soft_delete(reason="Deleted by CLI", deleted_by=None)
 
-        typer.echo(f"✅ Employé {employee_id} supprimé")
+        typer.echo(f"✅ Employé {employee_id} déplacé vers la corbeille")
 
     except Exception as e:
         typer.echo(f"❌ Erreur lors de la suppression: {e}", err=True)

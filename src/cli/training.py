@@ -187,12 +187,12 @@ def delete(
             typer.echo(f"⚠️  Pour supprimer la formation, utilisez --yes")
             raise typer.Exit(1)
 
-    # Delete training
+    # Soft delete training
     try:
         with db.atomic():
-            training.delete_instance()
+            training.soft_delete(reason="Deleted by CLI", deleted_by=None)
 
-        typer.echo(f"✅ Formation {training_id} supprimée")
+        typer.echo(f"✅ Formation {training_id} déplacée vers la corbeille")
 
     except Exception as e:
         typer.echo(f"❌ Erreur lors de la suppression: {e}", err=True)
