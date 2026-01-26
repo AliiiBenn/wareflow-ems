@@ -17,7 +17,7 @@ project_root = spec_file_path.parent
 
 # Bundle all external data files
 datas = [
-    ('build/assets/icon.ico', '.'),  # Application icon
+    ('images/icon.ico', '.'),  # Application icon
     ('src', 'src'),  # Include entire src directory
 ]
 
@@ -96,5 +96,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='build/assets/icon.ico',  # Application icon
+    icon='images/icon.ico',  # Application icon
 )

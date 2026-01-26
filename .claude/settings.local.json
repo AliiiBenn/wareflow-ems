@@ -19,7 +19,14 @@
       "Bash(gh issue edit:*)",
       "Bash(python -m pytest:*)",
       "Bash(pytest:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(gh repo view:*)",
+      "Bash(gh pr list:*)",
+      "Bash(findstr:*)",
+      "Bash(gh issue close:*)",
+      "Bash(python:*)",
+      "Bash(git tag:*)",
+      "Bash(git show:*)"
     ]
   }
 }
