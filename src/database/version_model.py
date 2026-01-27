@@ -7,7 +7,13 @@ enabling automatic migration detection and execution.
 from datetime import datetime
 from typing import Optional
 
-from peewee import *
+from peewee import (
+    AutoField,
+    CharField,
+    DateTimeField,
+    IntegerField,
+    Model,
+)
 
 from database.connection import database
 

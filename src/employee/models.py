@@ -4,7 +4,17 @@ import uuid
 from datetime import date, datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
-from peewee import *
+from peewee import (
+    AutoField,
+    CharField,
+    DateField,
+    DateTimeField,
+    ForeignKeyField,
+    IntegerField,
+    Model,
+    TextField,
+    UUIDField,
+)
 
 from database.connection import database
 from employee.constants import (

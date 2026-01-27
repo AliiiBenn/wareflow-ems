@@ -7,7 +7,13 @@ enabling automated migration and rollback capabilities.
 from datetime import datetime
 from typing import Optional
 
-from peewee import *
+from peewee import (
+    AutoField,
+    CharField,
+    DateTimeField,
+    IntegerField,
+    Model,
+)
 
 from database.connection import database
 

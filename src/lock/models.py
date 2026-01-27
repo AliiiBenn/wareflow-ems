@@ -3,7 +3,13 @@
 import uuid
 from datetime import datetime, timedelta
 
-from peewee import *
+from peewee import (
+    CharField,
+    DateTimeField,
+    IntegerField,
+    Model,
+    UUIDField,
+)
 
 from database.connection import database
 
