@@ -14,6 +14,7 @@ from ui_ctk.constants import (
     DEFAULT_HEIGHT,
 )
 from ui_ctk.views.base_view import BaseView
+from ui_ctk.dialogs.alert_settings_dialog import AlertSettingsDialog
 from utils.undo_manager import get_undo_manager
 
 
@@ -96,6 +97,15 @@ class MainWindow(ctk.CTkFrame):
             command=self.show_backups
         )
         self.btn_backups.pack(side="left", padx=5)
+
+        # Alert Settings button
+        self.btn_alert_settings = ctk.CTkButton(
+            button_container,
+            text="⚙️ Alert Settings",
+            width=140,
+            command=self.show_alert_settings
+        )
+        self.btn_alert_settings.pack(side="left", padx=5)
 
         # Trash button
         self.btn_trash = ctk.CTkButton(
@@ -347,6 +357,16 @@ class MainWindow(ctk.CTkFrame):
         except Exception as e:
             print(f"[ERROR] Failed to load backup view: {e}")
             self.show_error(f"Failed to load backup view: {e}")
+
+    def show_alert_settings(self):
+        """Display alert settings configuration dialog."""
+        try:
+            dialog = AlertSettingsDialog(self.winfo_toplevel())
+            dialog.run()
+            print("[NAV] Alert settings dialog closed")
+        except Exception as e:
+            print(f"[ERROR] Failed to open alert settings dialog: {e}")
+            self.show_error(f"Failed to open alert settings: {e}")
 
     def show_trash(self):
         """Display trash view for viewing and restoring deleted items."""
