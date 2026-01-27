@@ -159,35 +159,157 @@ def validate_document_path(
         return False, f"Error validating file: {e}"
 
 
-def sanitize_file_path(file_path: str) -> str:
+def sanitize_file_path(file_path: str, base_dir: Optional[str] = None) -> str:
     """
-    Sanitize file path by removing dangerous characters.
+    Sanitize file path to prevent path traversal while preserving directory structure.
 
-    This function removes or escapes characters that could be used
-    in path traversal attacks.
+    This function prevents path traversal attacks (../) and validates that the
+    resulting path is within the base directory. It preserves safe directory
+    structure to avoid file collisions.
 
     Args:
-        file_path: Path to sanitize
+        file_path: File path to sanitize
+        base_dir: Base directory for relative paths (optional but recommended)
 
     Returns:
-        Sanitized path string
+        Sanitized, safe file path as string
+
+    Raises:
+        ValueError: If path is unsafe (traversal attempt or absolute path without base_dir)
 
     Examples:
-        >>> sanitize_file_path("../../../etc/passwd")
-        'etcpasswd'
+        >>> sanitize_file_path("documents/report.pdf", "/safe/base")
+        'documents/report.pdf'
+        >>> sanitize_file_path("../../../etc/passwd", "/safe/base")
+        ValueError: Path traversal detected
         >>> sanitize_file_path("normal_file.pdf")
         'normal_file.pdf'
     """
-    # Remove path traversal sequences
-    sanitized = file_path.replace("..", "").replace("\\", "").replace("/", "")
+    # Convert to Path object for cross-platform handling
+    path = Path(file_path)
 
-    # Remove null bytes
-    sanitized = sanitized.replace("\x00", "")
+    # If base_dir provided, resolve relative to it and verify it's safe
+    if base_dir:
+        base = Path(base_dir).resolve()
+        try:
+            # Resolve the full path
+            full_path = (base / path).resolve()
 
-    # Remove control characters
-    sanitized = "".join(char for char in sanitized if ord(char) >= 32)
+            # Check if result is within base_dir (prevent traversal)
+            # Use os.path.commonpath for reliable comparison
+            try:
+                full_path.relative_to(base)
+            except ValueError:
+                raise ValueError(
+                    f"Path traversal detected: {file_path} attempts to access "
+                    f"files outside base directory"
+                )
 
-    return sanitized
+            # Return relative path from base_dir as string
+            return str(full_path.relative_to(base))
+        except (OSError, RuntimeError) as e:
+            # If path resolution fails, it's invalid
+            raise ValueError(f"Invalid file path: {file_path}: {e}")
+
+    else:
+        # Without base_dir, perform basic safety checks
+        # Convert to absolute path to detect traversal patterns
+        try:
+            resolved = path.resolve()
+        except (OSError, RuntimeError):
+            # If resolution fails, path is invalid
+            raise ValueError(f"Invalid file path: {file_path}")
+
+        # Check for suspicious patterns (but preserve safe separators)
+        if ".." in file_path:
+            raise ValueError(
+                f"Unsafe path detected: {file_path} contains path traversal "
+                f"patterns (..)"
+            )
+
+        # Check for absolute paths (only allowed with base_dir)
+        if path.is_absolute():
+            raise ValueError(
+                f"Unsafe path detected: {file_path} is an absolute path. "
+                f"Provide base_dir parameter for absolute paths."
+            )
+
+        # Remove null bytes and control characters, but preserve path separators
+        sanitized = file_path.replace("\x00", "")
+        sanitized = "".join(
+            char for char in sanitized
+            if ord(char) >= 32 or char in ['/', '\\']
+        )
+
+        return str(Path(sanitized))
+
+
+def generate_safe_filename(file_path: str, base_dir: str) -> str:
+    """
+    Generate a safe filename that avoids collisions by adding numeric suffix.
+
+    This function sanitizes a file path and if a file with that path already
+    exists in base_dir, it adds a numeric suffix to avoid collisions.
+
+    Args:
+        file_path: Original file path
+        base_dir: Base directory for storage
+
+    Returns:
+        Safe filename path, with numeric suffix if collision exists
+
+    Raises:
+        ValueError: If cannot generate unique filename after 1000 attempts
+
+    Examples:
+        >>> generate_safe_filename("test.txt", "/tmp")
+        'test.txt'  # if file doesn't exist
+        >>> generate_safe_filename("test.txt", "/tmp")
+        'test_1.txt'  # if test.txt already exists
+    """
+    # Sanitize the path with base_dir for security
+    try:
+        sanitized = sanitize_file_path(file_path, base_dir)
+    except ValueError as e:
+        # If sanitization fails, raise with context
+        raise ValueError(f"Cannot generate safe filename from {file_path}: {e}")
+
+    full_path = Path(base_dir) / sanitized
+
+    # If file doesn't exist, return as-is
+    if not full_path.exists():
+        return str(sanitized)
+
+    # Add numeric suffix to avoid collision
+    counter = 1
+    path_obj = Path(sanitized)
+    stem = path_obj.stem
+    suffix = path_obj.suffix
+    parent = path_obj.parent
+
+    # Handle files without extension or with multiple dots
+    if suffix == '':
+        # No extension
+        name_format = f"{stem}_{{counter}}"
+    else:
+        # Has extension
+        name_format = f"{stem}_{{counter}}{suffix}"
+
+    while True:
+        new_name = parent / name_format.format(counter=counter)
+        full_path = Path(base_dir) / new_name
+
+        if not full_path.exists():
+            return str(new_name)
+
+        counter += 1
+
+        # Safety limit to prevent infinite loops
+        if counter > 1000:
+            raise ValueError(
+                f"Cannot generate unique filename for {sanitized}: "
+                f"too many collisions (tried {counter} variants)"
+            )
 
 
 def is_safe_filename(filename: str) -> bool:
