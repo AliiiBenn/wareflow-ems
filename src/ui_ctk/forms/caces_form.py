@@ -5,6 +5,7 @@ from typing import Optional
 
 import customtkinter as ctk
 
+from constants.alerts import CACES_RENEWAL_DAYS
 from employee.models import Caces
 from utils.validation import InputValidator, ValidationError
 from ui_ctk.constants import (
@@ -298,8 +299,8 @@ class CacesFormDialog(BaseFormDialog):
         today = date.today()
         if completion_date > today:
             # Allow future dates up to 1 month (for upcoming certifications)
-            if (completion_date - today).days > 30:
-                return False, "Completion date cannot be more than 1 month in the future"
+            if (completion_date - today).days > CACES_RENEWAL_DAYS:
+                return False, f"Completion date cannot be more than {CACES_RENEWAL_DAYS} days in the future"
         elif completion_date.year < 2000:
             return False, "Completion date seems incorrect (before 2000)"
 

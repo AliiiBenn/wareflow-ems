@@ -5,6 +5,12 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Dict, List, Optional
 
+from constants.alerts import (
+    ALERT_CRITICAL_DAYS,
+    ALERT_INFO_DAYS,
+    ALERT_WARNING_DAYS,
+    DEFAULT_ALERT_DAYS,
+)
 from employee.models import Caces, Employee, MedicalVisit
 
 
@@ -51,9 +57,9 @@ class Alert:
         """Get urgency text for display."""
         if self.days_until < 0:
             return f"Expiré depuis {-self.days_until} jours"
-        elif self.days_until < 30:
+        elif self.days_until < ALERT_CRITICAL_DAYS:
             return f"Urgent ({self.days_until} jours restants)"
-        elif self.days_until < 60:
+        elif self.days_until < ALERT_WARNING_DAYS:
             return f"Bientôt ({self.days_until} jours restants)"
         else:
             return f"Valide ({self.days_until} jours restants)"
@@ -91,22 +97,22 @@ class AlertQuery:
 
         days_until = (expiration_date - today).days
 
-        if days_until < 30:
+        if days_until < ALERT_CRITICAL_DAYS:
             return UrgencyLevel.CRITICAL
-        elif days_until < 60:
+        elif days_until < ALERT_WARNING_DAYS:
             return UrgencyLevel.WARNING
-        elif days_until < 90:
+        elif days_until < ALERT_INFO_DAYS:
             return UrgencyLevel.INFO
         else:
             return UrgencyLevel.OK
 
     @staticmethod
-    def get_caces_alerts(days_threshold: int = 90, include_expired: bool = True) -> List[Alert]:
+    def get_caces_alerts(days_threshold: int = DEFAULT_ALERT_DAYS, include_expired: bool = True) -> List[Alert]:
         """
         Get all CACES alerts within threshold.
 
         Args:
-            days_threshold: Maximum days until expiration (default: 90)
+            days_threshold: Maximum days until expiration (default: DEFAULT_ALERT_DAYS)
             include_expired: Whether to include expired certifications (default: True)
 
         Returns:
@@ -148,12 +154,12 @@ class AlertQuery:
         return alerts
 
     @staticmethod
-    def get_medical_alerts(days_threshold: int = 90, include_expired: bool = True) -> List[Alert]:
+    def get_medical_alerts(days_threshold: int = DEFAULT_ALERT_DAYS, include_expired: bool = True) -> List[Alert]:
         """
         Get all medical visit alerts within threshold.
 
         Args:
-            days_threshold: Maximum days until expiration (default: 90)
+            days_threshold: Maximum days until expiration (default: DEFAULT_ALERT_DAYS)
             include_expired: Whether to include expired visits (default: True)
 
         Returns:
@@ -200,14 +206,14 @@ class AlertQuery:
 
     @staticmethod
     def get_all_alerts(
-        alert_types: Optional[List[AlertType]] = None, days_threshold: int = 90, include_expired: bool = True
+        alert_types: Optional[List[AlertType]] = None, days_threshold: int = DEFAULT_ALERT_DAYS, include_expired: bool = True
     ) -> List[Alert]:
         """
         Get all alerts matching criteria.
 
         Args:
             alert_types: List of alert types to include (None = all)
-            days_threshold: Maximum days until expiration (default: 90)
+            days_threshold: Maximum days until expiration (default: DEFAULT_ALERT_DAYS)
             include_expired: Whether to include expired items (default: True)
 
         Returns:
@@ -230,8 +236,8 @@ class AlertQuery:
 
     @staticmethod
     def get_critical_alerts() -> List[Alert]:
-        """Get all critical alerts (< 30 days or expired)."""
-        all_alerts = AlertQuery.get_all_alerts(days_threshold=30)
+        """Get all critical alerts (< ALERT_CRITICAL_DAYS days or expired)."""
+        all_alerts = AlertQuery.get_all_alerts(days_threshold=ALERT_CRITICAL_DAYS)
         return [a for a in all_alerts if a.urgency == UrgencyLevel.CRITICAL]
 
     @staticmethod
@@ -242,7 +248,7 @@ class AlertQuery:
         Returns:
             Dictionary with counts for each urgency level
         """
-        all_alerts = AlertQuery.get_all_alerts(days_threshold=90)
+        all_alerts = AlertQuery.get_all_alerts(days_threshold=DEFAULT_ALERT_DAYS)
 
         summary = {"critical": 0, "warning": 0, "info": 0, "ok": 0, "total": len(all_alerts)}
 

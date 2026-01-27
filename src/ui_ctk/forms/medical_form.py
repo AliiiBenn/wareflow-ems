@@ -5,6 +5,7 @@ from typing import Optional
 
 import customtkinter as ctk
 
+from constants.alerts import MEDICAL_VISIT_RENEWAL_DAYS
 from employee.models import MedicalVisit
 from utils.validation import InputValidator, ValidationError
 from ui_ctk.constants import (
@@ -348,8 +349,8 @@ class MedicalVisitFormDialog(BaseFormDialog):
         today = date.today()
         if visit_date > today:
             # Allow future dates up to 1 month (for scheduled visits)
-            if (visit_date - today).days > 30:
-                return False, "Visit date cannot be more than 1 month in the future"
+            if (visit_date - today).days > MEDICAL_VISIT_RENEWAL_DAYS:
+                return False, f"Visit date cannot be more than {MEDICAL_VISIT_RENEWAL_DAYS} days in the future"
         elif visit_date.year < 2000:
             return False, "Visit date seems incorrect (before 2000)"
 
