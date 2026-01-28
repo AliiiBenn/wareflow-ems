@@ -914,9 +914,8 @@ class Contract(Model):
         database = database
         table_name = "contracts"
         indexes = (
-            (("employee", "start_date"), False),  # Chronological order per employee
-            ("end_date", False),  # Expiring contracts
-            ("status", False),  # Active contracts
+            # Single column indexes are created automatically by CharField(index=True)
+            # Only need to specify composite indexes here
         )
 
     # ========== COMPUTED PROPERTIES ==========
@@ -1146,8 +1145,8 @@ class ContractAmendment(Model):
         database = database
         table_name = "contract_amendments"
         indexes = (
-            (("contract", "amendment_date"), False),  # Chronological per contract
-            ("amendment_type", False),  # By type
+            # Single column indexes are created automatically by CharField(index=True)
+            # Only need to specify composite indexes here
         )
 
     # ========== COMPUTED PROPERTIES ==========
