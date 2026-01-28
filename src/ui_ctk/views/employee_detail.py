@@ -197,7 +197,13 @@ class EmployeeDetailView(BaseView):
         header = ctk.CTkLabel(header_frame, text=f"📄 Contract History", font=("Arial", 14, "bold"))
         header.pack(side="left")
 
-        add_btn = ctk.CTkButton(header_frame, text=f"+ {BTN_ADD}", width=100, command=self.add_contract)
+        button_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+        button_frame.pack(side="right")
+
+        view_all_btn = ctk.CTkButton(button_frame, text="View All", width=100, command=self.view_contract_history)
+        view_all_btn.pack(side="right", padx=5)
+
+        add_btn = ctk.CTkButton(button_frame, text=f"+ {BTN_ADD}", width=100, command=self.add_contract)
         add_btn.pack(side="right")
 
         # Load contracts
@@ -685,6 +691,19 @@ class EmployeeDetailView(BaseView):
         except Exception as e:
             print(f"[ERROR] Failed to add contract: {e}")
             self.show_error(f"Failed to add contract: {e}")
+
+    def view_contract_history(self):
+        """Navigate to dedicated contract history view."""
+        try:
+            from ui_ctk.views.contract_history_view import ContractHistoryView
+
+            if self.master_window:
+                self.master_window.switch_view(ContractHistoryView, employee=self.employee)
+            else:
+                self.show_error("Unable to open contract history view")
+        except Exception as e:
+            print(f"[ERROR] Failed to open contract history: {e}")
+            self.show_error(f"Failed to open contract history: {e}")
 
     def edit_contract(self, contract: Contract):
         """Edit existing contract."""
