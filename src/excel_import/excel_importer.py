@@ -16,8 +16,6 @@ from employee.models import Employee
 from utils.validation import InputValidator, ValidationError
 from ui_ctk.constants import (
     CONTRACT_TYPE_CHOICES,
-    ROLE_CHOICES,
-    WORKSPACE_ZONES,
 )
 
 
